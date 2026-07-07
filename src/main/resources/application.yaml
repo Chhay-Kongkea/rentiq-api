@@ -1,0 +1,35 @@
+spring:
+  security:
+    oauth2:
+      resource server:
+        jwt:
+          issuer-uri: ${ISSUER_URI}
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  datasource:
+    url: ${DB_URL}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+
+  application:
+    name: rentiq-api
+server:
+  port: 9090
+
+
+keycloak:
+  server-url: ${SERVER_URL}
+  client-id: ${CLIENT_ID}
+  client-secrete: ${CLIENT_SECRETE}
+  realm: ${REALM}
+  target-realm: ${TARGET_REALM}
+
+
