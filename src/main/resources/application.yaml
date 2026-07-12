@@ -1,35 +1,45 @@
 spring:
+  application:
+    name: rentiq-api
+
   security:
     oauth2:
-      resource server:
+      resourceserver:
         jwt:
           issuer-uri: ${ISSUER_URI}
-  jpa:
-    hibernate:
-      ddl-auto: update
 
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
   datasource:
     url: ${DB_URL}
     driver-class-name: org.postgresql.Driver
     username: ${DB_USER}
     password: ${DB_PASSWORD}
 
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
 
-  application:
-    name: rentiq-api
+    show-sql: true
+
+    properties:
+      hibernate:
+        format_sql: true
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+
 server:
-  port: 9090
-
+  port: 8282
 
 keycloak:
   server-url: ${SERVER_URL}
   client-id: ${CLIENT_ID}
-  client-secrete: ${CLIENT_SECRETE}
+  client-secret: ${CLIENT_SECRET}
   realm: ${REALM}
   target-realm: ${TARGET_REALM}
 
-
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}

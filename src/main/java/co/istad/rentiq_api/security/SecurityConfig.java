@@ -34,11 +34,93 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/v3/api-docs/**",
                                 "swagger-ui/**","swagger-ui.html").permitAll()
+                        .requestMatchers(
+                                "/scalar",
+                                "/scalar/**",
+                                "/v3/api-docs",
+                                "/v3/api-docs/**"
+                        )
+                        .permitAll()
+
+
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/**","/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/category/**").permitAll()
-                        .anyRequest().authenticated()
+
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/v1/items",
+                                        "/api/v1/items/featured",
+                                        "/api/v1/items/nearby",
+                                        "/api/v1/items/*",
+                                        "/api/v1/items/*/images",
+                                        "/api/v1/items/*/reviews",
+                                        "/api/v1/items/*/availability",
+                                        "/api/v1/vendors/*/items"
+                                )
+                                .permitAll()
+
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/api/v1/items",
+                                        "/api/v1/items/*/images",
+                                        "/api/v1/items/*/availability-block"
+                                )
+                                .hasRole("VENDOR")
+
+                                .requestMatchers(
+                                        HttpMethod.PATCH,
+                                        "/api/v1/items/*",
+                                        "/api/v1/items/*/availability",
+                                        "/api/v1/items/*/status",
+                                        "/api/v1/items/*/images/*"
+                                )
+                                .hasRole("VENDOR")
+
+                                .requestMatchers(
+                                        HttpMethod.DELETE,
+                                        "/api/v1/items/*",
+                                        "/api/v1/items/*/images/*",
+                                        "/api/v1/items/*/availability-block/*"
+                                )
+                                .hasRole("VENDOR")
+
+                                .requestMatchers(
+                                        "/api/v1/vendors/me/items",
+                                        "/api/v1/vendors/me/items/**"
+                                )
+                                .hasRole("VENDOR")
+
+                             .requestMatchers(
+                                HttpMethod.GET,
+                                  "/api/v1/items/*/images"
+                             )
+                             .permitAll()
+
+                            .requestMatchers(
+                                    HttpMethod.POST,
+                                    "/api/v1/items/*/images"
+                            )
+                            .hasRole("VENDOR")
+
+                            .requestMatchers(
+                                    HttpMethod.PATCH,
+                                    "/api/v1/items/*/images/*"
+                            )
+                            .hasRole("VENDOR")
+
+                            .requestMatchers(
+                                    HttpMethod.DELETE,
+                                    "/api/v1/items/*/images/*"
+                            )
+                            .hasRole("VENDOR")
+                              .requestMatchers(
+                                            "/api/v1/admin/items",
+                                            "/api/v1/admin/items/**"
+                                    )
+                                    .hasRole("ADMIN")
+                            .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 ->
                         oauth2.jwt(Customizer.withDefaults())
