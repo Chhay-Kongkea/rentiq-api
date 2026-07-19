@@ -1,18 +1,30 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: rentiq_db
-    restart: always
+    container_name: rentiq-db
+    restart: unless-stopped
+
     shm_size: 128mb
+
     environment:
-      # : -default => default value ${DB_USER: - james}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-rentiq_db}
+
     ports:
-      - "5434:5432"
+      - "${DB_PORT:-5434}:5432"
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-rentiq_db}
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   postgres_data:
