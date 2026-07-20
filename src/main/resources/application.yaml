@@ -3,7 +3,7 @@ spring:
     name: rentiq-api
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5434/rentiq_db}
+    url: ${DB_URL:jdbc:postgresql://localhost:5435/rentiq_db}
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver

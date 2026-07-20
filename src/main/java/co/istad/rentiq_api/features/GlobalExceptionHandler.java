@@ -120,4 +120,51 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleMaximumUploadSize(MaxUploadSizeExceededException exception) {
         return buildError(HttpStatus.PAYLOAD_TOO_LARGE, "Uploaded file or request is too large");
     }
+
+    @ExceptionHandler(ItemRequestNotFoundException.class)
+    public ResponseEntity<?> handleItemRequestNotFound(
+            ItemRequestNotFoundException exception
+    ) {
+        return buildError(
+                HttpStatus.NOT_FOUND,
+                exception.getMessage()
+        );
+    }
+
+    @ExceptionHandler(OfferNotFoundException.class)
+    public ResponseEntity<?> handleOfferNotFound(
+            OfferNotFoundException exception
+    ) {
+        return buildError(
+                HttpStatus.NOT_FOUND,
+                exception.getMessage()
+        );
+    }
+
+    @ExceptionHandler({
+            ItemRequestAccessDeniedException.class,
+            OfferAccessDeniedException.class
+    })
+    public ResponseEntity<?> handleRequestAccessDenied(
+            RuntimeException exception
+    ) {
+        return buildError(
+                HttpStatus.FORBIDDEN,
+                exception.getMessage()
+        );
+    }
+
+    @ExceptionHandler({
+            IllegalItemRequestStateException.class,
+            IllegalOfferStateException.class,
+            DuplicateOfferException.class
+    })
+    public ResponseEntity<?> handleRequestConflict(
+            RuntimeException exception
+    ) {
+        return buildError(
+                HttpStatus.CONFLICT,
+                exception.getMessage()
+        );
+    }
 }
