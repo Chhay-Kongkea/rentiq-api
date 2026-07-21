@@ -369,7 +369,8 @@
 
 package co.istad.rentiq_api.features.auth.service.impl;
 
-import co.istad.rentiq_api.config.props.KeycloakAdminClientProps;
+
+import co.istad.rentiq_api.common.config.props.KeycloakAdminClientProps;
 import co.istad.rentiq_api.features.auth.RoleEnum;
 import co.istad.rentiq_api.features.auth.dto.request.*;
 import co.istad.rentiq_api.features.auth.dto.response.KeycloakTokenResponse;

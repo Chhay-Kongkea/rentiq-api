@@ -1,7 +1,8 @@
 package co.istad.rentiq_api.features.item.service.impl;
+
+import co.istad.rentiq_api.features.item.dto.storage.StoredImage;
 import co.istad.rentiq_api.features.item.exception.ImageStorageException;
 import co.istad.rentiq_api.features.item.exception.InvalidImageException;
-import co.istad.rentiq_api.features.item.dto.storage.StoredImage;
 import co.istad.rentiq_api.features.item.service.ImageStorageService;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.Transformation;

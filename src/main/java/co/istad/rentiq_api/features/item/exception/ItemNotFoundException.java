@@ -1,4 +1,4 @@
-package co.istad.rentiq_api.features.item.exception;
+package co.istad.rentiq_api.exception;
 
 
 import java.util.UUID;

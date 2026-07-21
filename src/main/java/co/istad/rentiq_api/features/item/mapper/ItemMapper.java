@@ -17,7 +17,8 @@ import org.mapstruct.ReportingPolicy;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@Mapper(componentModel = MappingConstants.ComponentModel.SPRING,
+@Mapper(
+        componentModel = MappingConstants.ComponentModel.SPRING,
         uses = ItemImageMapper.class,
         unmappedTargetPolicy = ReportingPolicy.ERROR
 )
@@ -43,10 +44,20 @@ public interface ItemMapper {
     @Mapping(target = "deletedAt", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "specifications", source = "request.specifications", qualifiedByName = "copySpecifications")
-    Item toEntity(CreateItemRequest request, String authenticatedUserId);
+    @Mapping(
+            target = "specifications",
+            source = "request.specifications",
+            qualifiedByName = "copySpecifications"
+    )
+    Item toEntity(
+            CreateItemRequest request,
+            String authenticatedUserId
+    );
 
-    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @BeanMapping(
+            nullValuePropertyMappingStrategy =
+                    NullValuePropertyMappingStrategy.IGNORE
+    )
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "ownerId", ignore = true)
     @Mapping(target = "images", ignore = true)
@@ -67,11 +78,25 @@ public interface ItemMapper {
     @Mapping(target = "deletedAt", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "specifications", source = "request.specifications", qualifiedByName = "copySpecifications")
-    void updateEntity(UpdateItemRequest request, @MappingTarget Item item);
+    @Mapping(
+            target = "specifications",
+            source = "request.specifications",
+            qualifiedByName = "copySpecifications"
+    )
+    void updateEntity(
+            UpdateItemRequest request,
+            @MappingTarget Item item
+    );
 
-    @Mapping(target = "primaryImageUrl", expression = "java(findPrimaryImageUrl(item))")
-    @Mapping(target = "specifications", source = "specifications", qualifiedByName = "copySpecifications")
+    @Mapping(
+            target = "primaryImageUrl",
+            expression = "java(findPrimaryImageUrl(item))"
+    )
+    @Mapping(
+            target = "specifications",
+            source = "specifications",
+            qualifiedByName = "copySpecifications"
+    )
     ItemResponse toResponse(Item item);
 
     default String findPrimaryImageUrl(Item item) {
@@ -83,12 +108,14 @@ public interface ItemMapper {
                 .stream()
                 .filter(ItemImage::isPrimary)
                 .findFirst()
-                .orElse(item.getImages().get(0))
+                .orElse(item.getImages().getFirst())
                 .getImageUrl();
     }
 
     @Named("copySpecifications")
-    default Map<String, Object> copySpecifications(Map<String, Object> specifications) {
+    default Map<String, Object> copySpecifications(
+            Map<String, Object> specifications
+    ) {
         if (specifications == null) {
             return new LinkedHashMap<>();
         }

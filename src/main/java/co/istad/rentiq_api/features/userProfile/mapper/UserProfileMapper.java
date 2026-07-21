@@ -1,9 +1,9 @@
 package co.istad.rentiq_api.features.userProfile.mapper;
 
 
+import co.istad.rentiq_api.features.notification.entity.NotificationPreference;
 import co.istad.rentiq_api.features.userProfile.dto.response.AddressResponse;
 import co.istad.rentiq_api.features.userProfile.dto.response.NotificationPreferencesResponse;
-import co.istad.rentiq_api.features.userProfile.entity.NotificationPreference;
 import co.istad.rentiq_api.features.userProfile.entity.UserAddress;
 import co.istad.rentiq_api.features.userProfile.util.GeoUtils;
 import org.mapstruct.Mapper;

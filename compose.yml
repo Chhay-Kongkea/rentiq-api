@@ -1,16 +1,17 @@
 services:
   db:
-    image: postgres:16-alpine
-    container_name: rentiq_db
-    restart: always
-    shm_size: 128mb
+    image: postgis/postgis:16-3.4-alpine
+    container_name: rentiq-db
+    restart: unless-stopped
+
     environment:
-      # : -default => default value ${DB_USER: - james}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-rentiq_db}
+
     ports:
-      - "5434:5432"
+      - "${DB_PORT:-5434}:5432"
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
 

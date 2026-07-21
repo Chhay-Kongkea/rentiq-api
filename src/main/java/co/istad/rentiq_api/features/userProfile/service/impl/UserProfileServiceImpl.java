@@ -1,19 +1,20 @@
 package co.istad.rentiq_api.features.userProfile.service.impl;
 
 
-import co.istad.rentiq_api.config.props.KeycloakAdminClientProps;
 
+
+import co.istad.rentiq_api.common.config.props.KeycloakAdminClientProps;
+import co.istad.rentiq_api.features.notification.entity.NotificationPreference;
+import co.istad.rentiq_api.features.notification.repository.NotificationPreferenceRepository;
 import co.istad.rentiq_api.features.userProfile.dto.request.AddressRequest;
 import co.istad.rentiq_api.features.userProfile.dto.request.NotificationPreferencesRequest;
 import co.istad.rentiq_api.features.userProfile.dto.request.UpdateProfileRequest;
 import co.istad.rentiq_api.features.userProfile.dto.response.*;
-import co.istad.rentiq_api.features.userProfile.entity.NotificationPreference;
 import co.istad.rentiq_api.features.userProfile.entity.User;
 import co.istad.rentiq_api.features.userProfile.entity.UserAddress;
 import co.istad.rentiq_api.features.userProfile.exception.UserProfileNotFoundException;
 import co.istad.rentiq_api.features.userProfile.exception.AddressNotFoundException;
 import co.istad.rentiq_api.features.userProfile.mapper.UserProfileMapper;
-import co.istad.rentiq_api.features.userProfile.repository.NotificationPreferenceRepository;
 import co.istad.rentiq_api.features.userProfile.repository.UserAddressRepository;
 import co.istad.rentiq_api.features.userProfile.repository.UserRepository;
 import co.istad.rentiq_api.features.userProfile.service.AvatarStorageService;
@@ -30,7 +31,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 

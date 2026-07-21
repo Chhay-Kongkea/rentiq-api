@@ -16,16 +16,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 
 @Entity
-@Table(
-        name = "items",
-        indexes = {
-                @Index(name = "idx_items_owner", columnList = "owner_id"),
-                @Index(name = "idx_items_category", columnList = "category_id"),
-                @Index(name = "idx_items_status", columnList = "status"),
-                @Index(name = "idx_items_approval_status", columnList = "approval_status"),
-                @Index(name = "idx_items_created_at", columnList = "created_at")
-        }
-)
+@Table(name = "items")
 @Getter
 @Setter
 @Builder
