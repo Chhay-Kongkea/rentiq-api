@@ -24,9 +24,14 @@ import java.util.stream.Collectors;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationConverter jwtAuthenticationConverter) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            JwtAuthenticationConverter jwtAuthenticationConverter
+    ) throws Exception {
+
         http
                 .csrf(AbstractHttpConfigurer::disable)
+
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS
@@ -36,7 +41,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         /*
-                         * API documentation
+                         * =====================================================
+                         * API DOCUMENTATION
+                         * =====================================================
                          */
                         .requestMatchers(
                                 "/v3/api-docs",
@@ -44,26 +51,41 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/scalar",
-                                "/scalar/**"
+                                "/scalar/**",
+                                "/scalar.html"
                         )
                         .permitAll()
 
                         /*
-                         * Authentication
+                         * =====================================================
+                         * AUTHENTICATION
+                         * =====================================================
                          */
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/register")
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/auth/register"
+                        )
                         .permitAll()
 
                         /*
-                         * Categories
+                         * =====================================================
+                         * CATEGORIES
+                         * =====================================================
                          */
-                        .requestMatchers(HttpMethod.GET, "/api/v1/categories", "/api/v1/categories/**")
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/categories",
+                                "/api/v1/categories/**"
+                        )
                         .permitAll()
 
                         /*
-                         * Public items
+                         * =====================================================
+                         * PUBLIC ITEMS
+                         * =====================================================
                          */
-                        .requestMatchers(HttpMethod.GET,
+                        .requestMatchers(
+                                HttpMethod.GET,
                                 "/api/v1/items",
                                 "/api/v1/items/featured",
                                 "/api/v1/items/nearby",
@@ -76,16 +98,102 @@ public class SecurityConfig {
                         .permitAll()
 
                         /*
-                         * Vendor item management
+                         * =====================================================
+                         * SEARCH AND DISCOVERY
+                         * =====================================================
                          */
-                        .requestMatchers(HttpMethod.POST,
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/search/items",
+                                "/api/v1/search/suggestions",
+                                "/api/v1/search/nearby"
+                        )
+                        .permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/search/logs"
+                        )
+                        .hasRole("USER")
+
+                        .requestMatchers(
+                                "/api/v1/admin/search-logs",
+                                "/api/v1/admin/search-logs/**"
+                        )
+                        .hasRole("ADMIN")
+
+                        /*
+                         * =====================================================
+                         * PUBLIC ITEM REQUESTS
+                         * =====================================================
+                         */
+
+                        /*
+                         * Must be declared before:
+                         * /api/v1/item-requests/*
+                         */
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/item-requests/nearby"
+                        )
+                        .hasRole("VENDOR")
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/item-requests"
+                        )
+                        .permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/item-requests/*"
+                        )
+                        .hasRole("USER")
+
+                        /*
+                         * =====================================================
+                         * USER ITEM REQUEST MANAGEMENT
+                         * =====================================================
+                         */
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/item-requests"
+                        )
+                        .hasRole("USER")
+
+                        .requestMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/item-requests/*"
+                        )
+                        .hasRole("USER")
+
+                        .requestMatchers(
+                                HttpMethod.DELETE,
+                                "/api/v1/item-requests/*"
+                        )
+                        .hasRole("USER")
+
+                        .requestMatchers(
+                                "/api/v1/users/me/item-requests",
+                                "/api/v1/users/me/item-requests/**"
+                        )
+                        .hasRole("USER")
+
+                        /*
+                         * =====================================================
+                         * VENDOR ITEM MANAGEMENT
+                         * =====================================================
+                         */
+                        .requestMatchers(
+                                HttpMethod.POST,
                                 "/api/v1/items",
                                 "/api/v1/items/*/images",
                                 "/api/v1/items/*/availability-block"
                         )
                         .hasRole("VENDOR")
 
-                        .requestMatchers(HttpMethod.PATCH,
+                        .requestMatchers(
+                                HttpMethod.PATCH,
                                 "/api/v1/items/*",
                                 "/api/v1/items/*/availability",
                                 "/api/v1/items/*/status",
@@ -93,111 +201,160 @@ public class SecurityConfig {
                         )
                         .hasRole("VENDOR")
 
-                        .requestMatchers(HttpMethod.DELETE,
+                        .requestMatchers(
+                                HttpMethod.DELETE,
                                 "/api/v1/items/*",
                                 "/api/v1/items/*/images/*",
                                 "/api/v1/items/*/availability-block/*"
                         )
                         .hasRole("VENDOR")
 
-                        .requestMatchers("/api/v1/vendors/me/items", "/api/v1/vendors/me/items/**")
-                        .hasRole("VENDOR")
-
-                        /*
-                         * Admin item management
-                         */
-                        .requestMatchers("/api/v1/admin/items", "/api/v1/admin/items/**")
-                        .hasRole("ADMIN")
-
-                        /*
-                         * Search and discovery
-                         */
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/v1/search/items",
-                                "/api/v1/search/suggestions",
-                                "/api/v1/search/nearby"
+                        .requestMatchers(
+                                "/api/v1/vendors/me/items",
+                                "/api/v1/vendors/me/items/**"
                         )
-                        .permitAll()
-
-                        .requestMatchers(HttpMethod.GET, "/api/v1/search/logs")
-                        .hasRole("USER")
-
-                        .requestMatchers("/api/v1/admin/search-logs", "/api/v1/admin/search-logs/**")
-                        .hasRole("ADMIN")
-
-                        /*
-                         * Item request nearby must be declared
-                         * before /item-requests/*.
-                         */
-                        .requestMatchers(HttpMethod.GET, "/api/v1/item-requests/nearby")
                         .hasRole("VENDOR")
 
                         /*
-                         * Public item-request listing
+                         * =====================================================
+                         * OFFER MANAGEMENT
+                         * =====================================================
                          */
-                        .requestMatchers(HttpMethod.GET, "/api/v1/item-requests")
-                        .permitAll()
 
                         /*
-                         * Request detail according to your endpoint table:
-                         * USER access.
+                         * Vendor submits an offer.
                          */
-                        .requestMatchers(HttpMethod.GET, "/api/v1/item-requests/*")
-                        .hasRole("USER")
-
-                        /*
-                         * Customer request management
-                         */
-                        .requestMatchers(HttpMethod.POST, "/api/v1/item-requests")
-                        .hasRole("USER")
-
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/item-requests/*")
-                        .hasRole("USER")
-
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/item-requests/*")
-                        .hasRole("USER")
-
-                        .requestMatchers("/api/v1/users/me/item-requests", "/api/v1/users/me/item-requests/**")
-                        .hasRole("USER")
-
-                        /*
-                         * Vendor sends an offer
-                         */
-                        .requestMatchers(HttpMethod.POST, "/api/v1/item-requests/*/offers")
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/item-requests/*/offers"
+                        )
                         .hasRole("VENDOR")
 
                         /*
-                         * Customer views and manages received offers
+                         * Customer views offers received for a request.
                          */
-                        .requestMatchers(HttpMethod.GET, "/api/v1/item-requests/*/offers")
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/item-requests/*/offers"
+                        )
                         .hasRole("USER")
 
-                        .requestMatchers(HttpMethod.PATCH,
+                        /*
+                         * Customer accepts or rejects an offer.
+                         */
+                        .requestMatchers(
+                                HttpMethod.PATCH,
                                 "/api/v1/item-requests/*/offers/*/accept",
                                 "/api/v1/item-requests/*/offers/*/reject"
                         )
                         .hasRole("USER")
 
                         /*
-                         * Vendor offer endpoints from your official API:
+                         * Vendor reads, updates, or withdraws own offer.
                          */
-                        .requestMatchers(HttpMethod.GET, "/api/v1/offers/*")
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/offers/*"
+                        )
                         .hasRole("VENDOR")
 
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/offers/*")
+                        .requestMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/offers/*"
+                        )
                         .hasRole("VENDOR")
 
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/offers/*")
+                        .requestMatchers(
+                                HttpMethod.DELETE,
+                                "/api/v1/offers/*"
+                        )
                         .hasRole("VENDOR")
 
                         /*
-                         * Vendor tracks offers
+                         * Vendor tracks submitted offers.
                          */
-                        .requestMatchers(HttpMethod.GET, "/api/v1/vendors/me/offers", "/api/v1/vendors/me/offers/*/status")
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/vendors/me/offers",
+                                "/api/v1/vendors/me/offers/*/status"
+                        )
                         .hasRole("VENDOR")
 
                         /*
-                         * All unmatched endpoints require authentication.
+                         * =====================================================
+                         * USER NOTIFICATIONS
+                         * =====================================================
+                         */
+                        .requestMatchers(
+                                "/api/v1/notifications",
+                                "/api/v1/notifications/**"
+                        )
+                        .hasRole("USER")
+
+                        /*
+                         * =====================================================
+                         * USER REPORTS
+                         * =====================================================
+                         */
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/reports"
+                        )
+                        .hasRole("USER")
+
+                        /*
+                         * Declare /me before /{reportId}.
+                         */
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/reports/me"
+                        )
+                        .hasRole("USER")
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/reports/*"
+                        )
+                        .hasRole("USER")
+
+                        /*
+                         * =====================================================
+                         * ADMIN ITEM MANAGEMENT
+                         * =====================================================
+                         */
+                        .requestMatchers(
+                                "/api/v1/admin/items",
+                                "/api/v1/admin/items/**"
+                        )
+                        .hasRole("ADMIN")
+
+                        /*
+                         * =====================================================
+                         * ADMIN NOTIFICATIONS
+                         * =====================================================
+                         */
+                        .requestMatchers(
+                                "/api/v1/admin/notifications",
+                                "/api/v1/admin/notifications/**"
+                        )
+                        .hasRole("ADMIN")
+
+                        /*
+                         * =====================================================
+                         * ADMIN REPORTS
+                         * =====================================================
+                         */
+                        .requestMatchers(
+                                "/api/v1/admin/reports",
+                                "/api/v1/admin/reports/**"
+                        )
+                        .hasRole("ADMIN")
+
+                        /*
+                         * =====================================================
+                         * FALLBACK
+                         * Must always be the final authorization rule.
+                         * =====================================================
                          */
                         .anyRequest()
                         .authenticated()
@@ -215,34 +372,47 @@ public class SecurityConfig {
     }
 
     @Bean
-    public JwtAuthenticationConverter jwtAuthenticationConverterForKeycloak() {
+    public JwtAuthenticationConverter
+    jwtAuthenticationConverterForKeycloak() {
 
-        Converter<Jwt, Collection<GrantedAuthority>> authoritiesConverter = jwt -> {
+        Converter<Jwt, Collection<GrantedAuthority>>
+                authoritiesConverter = jwt -> {
 
-            Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
+            Map<String, Object> realmAccess =
+                    jwt.getClaimAsMap("realm_access");
 
             if (realmAccess == null) {
                 return Collections.emptyList();
             }
 
-            Object rolesValue = realmAccess.get("roles");
+            Object rolesValue =
+                    realmAccess.get("roles");
 
-            if (!(rolesValue instanceof Collection<?> roles)) {
+            if (!(rolesValue
+                    instanceof Collection<?> roles)) {
                 return Collections.emptyList();
             }
 
             return roles.stream()
                     .filter(String.class::isInstance)
                     .map(String.class::cast)
+                    .map(String::trim)
+                    .filter(role -> !role.isBlank())
                     .map(String::toUpperCase)
                     .map(role ->
-                            new SimpleGrantedAuthority("ROLE_" + role)
+                            new SimpleGrantedAuthority(
+                                    "ROLE_" + role
+                            )
                     )
                     .collect(Collectors.toList());
         };
 
-        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
+        JwtAuthenticationConverter converter =
+                new JwtAuthenticationConverter();
+
+        converter.setJwtGrantedAuthoritiesConverter(
+                authoritiesConverter
+        );
 
         return converter;
     }

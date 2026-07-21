@@ -1,9 +1,8 @@
 package co.istad.rentiq_api.features.item.service.impl;
 
-import co.istad.rentiq_api.exception.InvalidImageException;
-import co.istad.rentiq_api.exception.ItemAccessDeniedException;
-import co.istad.rentiq_api.exception.ItemImageNotFoundException;
-import co.istad.rentiq_api.exception.ItemNotFoundException;
+import co.istad.rentiq_api.common.exception.ForbiddenException;
+import co.istad.rentiq_api.common.exception.InvalidOperationException;
+import co.istad.rentiq_api.common.exception.NotFoundException;
 import co.istad.rentiq_api.features.item.dto.request.UpdateItemImageRequest;
 import co.istad.rentiq_api.features.item.dto.respone.ItemImageResponse;
 import co.istad.rentiq_api.features.item.dto.storage.StoredImage;
@@ -29,7 +28,6 @@ import java.util.UUID;
 public class ItemImageServiceImpl implements ItemImageService {
 
     private static final int MAX_IMAGES_PER_ITEM = 8;
-
     private final ItemRepository itemRepository;
     private final ItemImageRepository itemImageRepository;
     private final ImageStorageService imageStorageService;
@@ -38,14 +36,15 @@ public class ItemImageServiceImpl implements ItemImageService {
     @Override
     @Transactional
     public List<ItemImageResponse> uploadImages(UUID itemId, List<MultipartFile> files, String authenticatedUserId) {
-        Item item = getOwnedItem(itemId ,authenticatedUserId);
+        Item item = getOwnedItem(itemId, authenticatedUserId);
         validateFiles(files);
 
         long currentImageCount = itemImageRepository.countByItemId(itemId);
 
-        if (currentImageCount + files.size()
-                > MAX_IMAGES_PER_ITEM) {
-            throw new InvalidImageException(
+        if (currentImageCount + files.size() > MAX_IMAGES_PER_ITEM) {
+
+            throw new InvalidOperationException(
+                    "Item image",
                     "An item can have a maximum of "
                             + MAX_IMAGES_PER_ITEM
                             + " images"
@@ -54,14 +53,15 @@ public class ItemImageServiceImpl implements ItemImageService {
 
         List<ItemImage> savedImages = new ArrayList<>();
         List<String> uploadedPublicIds = new ArrayList<>();
-
         try {
             int nextSortOrder = Math.toIntExact(currentImageCount);
+
             boolean makeFirstImagePrimary = currentImageCount == 0;
 
             for (MultipartFile file : files) {
                 StoredImage storedImage = imageStorageService.uploadItemImage(file, itemId);
                 uploadedPublicIds.add(storedImage.publicId());
+
                 ItemImage itemImage = ItemImage.builder()
                                 .item(item)
                                 .imageUrl(storedImage.imageUrl())
@@ -74,9 +74,7 @@ public class ItemImageServiceImpl implements ItemImageService {
 
                 makeFirstImagePrimary = false;
 
-                savedImages.add(
-                        itemImageRepository.save(itemImage)
-                );
+                savedImages.add(itemImageRepository.save(itemImage));
             }
 
             return savedImages
@@ -95,7 +93,7 @@ public class ItemImageServiceImpl implements ItemImageService {
         Item item = itemRepository
                 .findByIdAndDeletedFalse(itemId)
                 .orElseThrow(
-                        () -> new ItemNotFoundException(itemId)
+                        () -> new NotFoundException("Item", itemId)
                 );
 
         return itemImageRepository
@@ -121,7 +119,9 @@ public class ItemImageServiceImpl implements ItemImageService {
 
         ItemImage savedImage = itemImageRepository.save(image);
 
-        return itemImageMapper.toResponse(savedImage);
+        return itemImageMapper.toResponse(
+                savedImage
+        );
     }
 
     @Override
@@ -134,7 +134,6 @@ public class ItemImageServiceImpl implements ItemImageService {
         boolean wasPrimary = image.isPrimary();
 
         imageStorageService.deleteImage(image.getPublicId());
-
         itemImageRepository.delete(image);
         itemImageRepository.flush();
 
@@ -147,36 +146,40 @@ public class ItemImageServiceImpl implements ItemImageService {
         Item item = itemRepository
                 .findByIdAndDeletedFalse(itemId)
                 .orElseThrow(
-                        () -> new ItemNotFoundException(itemId)
+                        () -> new NotFoundException("Item", itemId)
                 );
 
-        if (authenticatedUserId == null || !item.getOwnerId().equals(authenticatedUserId)) {
-            throw new ItemAccessDeniedException();
+        if (authenticatedUserId == null || !item.getOwnerId()
+                .equals(authenticatedUserId)) {
+
+            throw new ForbiddenException(
+                    "Item",
+                    "Only the item owner can manage item images"
+            );
         }
 
         return item;
     }
 
-    private ItemImage getItemImage(
-            UUID itemId,
-            UUID imageId
-    ) {
+    private ItemImage getItemImage(UUID itemId, UUID imageId) {
         return itemImageRepository
                 .findByIdAndItemId(imageId, itemId)
                 .orElseThrow(
-                        () -> new ItemImageNotFoundException(imageId)
+                        () -> new NotFoundException("Item image", imageId)
                 );
     }
 
     private void validateFiles(List<MultipartFile> files) {
         if (files == null || files.isEmpty()) {
-            throw new InvalidImageException(
+            throw new InvalidOperationException(
+                    "Item image",
                     "At least one image is required"
             );
         }
 
         if (files.size() > MAX_IMAGES_PER_ITEM) {
-            throw new InvalidImageException(
+            throw new InvalidOperationException(
+                    "Item image",
                     "You cannot upload more than "
                             + MAX_IMAGES_PER_ITEM
                             + " images at once"
@@ -184,18 +187,17 @@ public class ItemImageServiceImpl implements ItemImageService {
         }
     }
 
-    private void changePrimaryImage(
-            UUID itemId,
-            ItemImage newPrimaryImage
-    ) {
+    private void changePrimaryImage(UUID itemId, ItemImage newPrimaryImage) {
         itemImageRepository
                 .findFirstByItemIdAndPrimaryTrue(itemId)
-                .filter(currentPrimary -> !currentPrimary
-                                        .getId()
-                                        .equals(newPrimaryImage.getId())
+                .filter(currentPrimary ->
+                        !currentPrimary
+                                .getId()
+                                .equals(newPrimaryImage.getId())
                 )
                 .ifPresent(currentPrimary -> {
                     currentPrimary.setPrimary(false);
+
                     itemImageRepository.save(currentPrimary);
                 });
 
@@ -216,6 +218,7 @@ public class ItemImageServiceImpl implements ItemImageService {
             try {
                 imageStorageService.deleteImage(publicId);
             } catch (RuntimeException ignored) {
+                // Preserve the original upload/database exception.
             }
         }
     }

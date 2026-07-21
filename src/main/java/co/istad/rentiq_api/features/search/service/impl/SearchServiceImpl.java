@@ -30,7 +30,6 @@ import java.util.Set;
 public class SearchServiceImpl implements SearchService {
 
     private static final int MAX_PAGE_SIZE = 100;
-
     private static final Set<String> ALLOWED_SORT_FIELDS =
             Set.of(
                     "title",
@@ -51,10 +50,7 @@ public class SearchServiceImpl implements SearchService {
 
     @Override
     @Transactional
-    public PageResponse<ItemResponse> searchItems(
-            ItemSearchFilter filter,
-            String authenticatedUserId
-    ) {
+    public PageResponse<ItemResponse> searchItems(ItemSearchFilter filter, String authenticatedUserId) {
         Pageable pageable = createPageable(
                 filter.pageNumber(),
                 filter.pageSize(),
@@ -75,63 +71,39 @@ public class SearchServiceImpl implements SearchService {
                 null
         );
 
-        Page<ItemResponse> response =
-                itemPage.map(itemMapper::toResponse);
+        Page<ItemResponse> response = itemPage.map(itemMapper::toResponse);
 
         return PageResponse.from(response);
     }
 
     @Override
-    public List<SearchSuggestionResponse> getSuggestions(
-            String keyword,
-            Integer limit
-    ) {
-        String normalizedKeyword =
-                keyword == null
-                        ? ""
-                        : keyword.trim();
+    public List<SearchSuggestionResponse> getSuggestions(String keyword, Integer limit) {
+        String normalizedKeyword = keyword == null ? "" : keyword.trim();
 
         if (normalizedKeyword.length() < 2) {
             return List.of();
         }
 
         int safeLimit = limit == null
-                ? 10
-                : Math.max(1, Math.min(limit, 20));
+                ? 10 : Math.max(1, Math.min(limit, 20));
 
-        Pageable pageable = PageRequest.of(
-                0,
-                safeLimit
-        );
+        Pageable pageable = PageRequest.of(0, safeLimit);
 
         return itemRepository
-                .findTitleSuggestions(
-                        normalizedKeyword,
-                        pageable
-                )
+                .findTitleSuggestions(normalizedKeyword, pageable)
                 .stream()
                 .map(title ->
-                        new SearchSuggestionResponse(
-                                title,
-                                "ITEM"
-                        )
+                        new SearchSuggestionResponse(title, "ITEM")
                 )
                 .toList();
     }
 
     @Override
     @Transactional
-    public PageResponse<ItemResponse> searchNearby(
-            NearbyItemSearchFilter filter,
-            String authenticatedUserId
-    ) {
-        Pageable pageable = PageRequest.of(
-                normalizePageNumber(filter.pageNumber()),
-                normalizePageSize(filter.pageSize())
-        );
+    public PageResponse<ItemResponse> searchNearby(NearbyItemSearchFilter filter, String authenticatedUserId) {
+        Pageable pageable = PageRequest.of(normalizePageNumber(filter.pageNumber()), normalizePageSize(filter.pageSize()));
 
-        Page<Item> itemPage =
-                itemRepository.searchNearby(
+        Page<Item> itemPage = itemRepository.searchNearby(
                         filter.latitude(),
                         filter.longitude(),
                         filter.radiusKm(),
@@ -147,26 +119,20 @@ public class SearchServiceImpl implements SearchService {
                 filter.longitude()
         );
 
-        Page<ItemResponse> response =
-                itemPage.map(itemMapper::toResponse);
+        Page<ItemResponse> response = itemPage.map(itemMapper::toResponse);
 
         return PageResponse.from(response);
     }
 
     @Override
-    public PageResponse<SearchLogResponse> getMySearchLogs(
-            String authenticatedUserId,
-            Integer pageNumber,
-            Integer pageSize
-    ) {
+    public PageResponse<SearchLogResponse> getMySearchLogs(String authenticatedUserId, Integer pageNumber, Integer pageSize) {
         Pageable pageable = PageRequest.of(
                 normalizePageNumber(pageNumber),
                 normalizePageSize(pageSize),
                 Sort.by("createdAt").descending()
         );
 
-        Page<SearchLogResponse> response =
-                searchLogRepository
+        Page<SearchLogResponse> response = searchLogRepository
                         .findAllByUserIdOrderByCreatedAtDesc(
                                 authenticatedUserId,
                                 pageable
@@ -177,33 +143,22 @@ public class SearchServiceImpl implements SearchService {
     }
 
     @Override
-    public PageResponse<SearchLogResponse> getAllSearchLogs(
-            Integer pageNumber,
-            Integer pageSize
-    ) {
+    public PageResponse<SearchLogResponse> getAllSearchLogs(Integer pageNumber, Integer pageSize) {
         Pageable pageable = PageRequest.of(
                 normalizePageNumber(pageNumber),
                 normalizePageSize(pageSize),
                 Sort.by("createdAt").descending()
         );
 
-        Page<SearchLogResponse> response =
-                searchLogRepository
+        Page<SearchLogResponse> response = searchLogRepository
                         .findAll(pageable)
                         .map(searchLogMapper::toResponse);
 
         return PageResponse.from(response);
     }
 
-    private void saveSearchLog(
-            String userId,
-            String keyword,
-            Short categoryId,
-            Double latitude,
-            Double longitude
-    ) {
-        SearchLog.SearchLogBuilder builder =
-                SearchLog.builder()
+    private void saveSearchLog(String userId, String keyword, Short categoryId, Double latitude, Double longitude) {
+        SearchLog.SearchLogBuilder builder = SearchLog.builder()
                         .userId(userId)
                         .keyword(normalize(keyword))
                         .categoryId(categoryId);
@@ -220,19 +175,12 @@ public class SearchServiceImpl implements SearchService {
         searchLogRepository.save(builder.build());
     }
 
-    private Pageable createPageable(
-            Integer pageNumber,
-            Integer pageSize,
-            String sortBy,
-            String sortDirection
-    ) {
-        String safeSortField =
-                ALLOWED_SORT_FIELDS.contains(sortBy)
+    private Pageable createPageable(Integer pageNumber, Integer pageSize, String sortBy, String sortDirection) {
+        String safeSortField = ALLOWED_SORT_FIELDS.contains(sortBy)
                         ? sortBy
                         : "createdAt";
 
-        Sort.Direction direction =
-                "asc".equalsIgnoreCase(sortDirection)
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDirection)
                         ? Sort.Direction.ASC
                         : Sort.Direction.DESC;
 
@@ -256,10 +204,7 @@ public class SearchServiceImpl implements SearchService {
             return 12;
         }
 
-        return Math.max(
-                1,
-                Math.min(pageSize, MAX_PAGE_SIZE)
-        );
+        return Math.max(1, Math.min(pageSize, MAX_PAGE_SIZE));
     }
 
     private String normalize(String value) {

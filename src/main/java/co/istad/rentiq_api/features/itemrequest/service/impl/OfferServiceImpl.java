@@ -1,6 +1,6 @@
 package co.istad.rentiq_api.features.itemrequest.service.impl;
 
-import co.istad.rentiq_api.exception.*;
+import co.istad.rentiq_api.common.exception.*;
 import co.istad.rentiq_api.features.item.dto.respone.PageResponse;
 import co.istad.rentiq_api.features.item.entity.Item;
 import co.istad.rentiq_api.features.item.repository.ItemRepository;
@@ -39,33 +39,46 @@ public class OfferServiceImpl implements OfferService {
     public OfferResponse createOffer(UUID requestId, CreateOfferRequest request, String authenticatedOwnerId) {
         ItemRequest itemRequest = getOpenRequest(requestId);
 
-        if (itemRequest.getCustomerId().equals(authenticatedOwnerId)) {
-            throw new IllegalOfferStateException(
-                    "A customer cannot submit an offer to their own request"
+        if (authenticatedOwnerId == null || authenticatedOwnerId.isBlank()) {
+            throw new ForbiddenException("Offer", "An authenticated vendor is required");
+        }
+
+        if (itemRequest.getCustomerId()
+                .equals(authenticatedOwnerId)) {
+            throw new InvalidOperationException("Offer", "A customer cannot submit an offer to their own request");
+        }
+
+        boolean offerAlreadyExists = offerRepository
+                        .existsByItemRequestIdAndOwnerId(
+                                requestId,
+                                authenticatedOwnerId
+                        );
+
+        if (offerAlreadyExists) {
+            throw new DuplicateException(
+                    "Offer", "You have already submitted an offer for this item request"
             );
         }
 
-        if (offerRepository
-                .existsByItemRequestIdAndOwnerId(requestId, authenticatedOwnerId)) {
-            throw new DuplicateOfferException();
-        }
-
-        Item item = resolveOwnedItem(
-                request.itemId(),
-                authenticatedOwnerId
-        );
+        Item item = resolveOwnedItem(request.itemId(), authenticatedOwnerId);
 
         Offer offer = Offer.builder()
                 .itemRequest(itemRequest)
                 .ownerId(authenticatedOwnerId)
                 .item(item)
                 .offeredPrice(request.offeredPrice())
-                .currency(request.currency())
-                .message(request.message())
+                .currency(
+                        request.currency() == null ? "USD" : request.currency().trim().toUpperCase()
+                )
+                .message(
+                        request.message() == null ? null : request.message().trim()
+                )
                 .status(OfferStatus.PENDING)
                 .build();
 
-        return offerMapper.toResponse(offerRepository.save(offer));
+        Offer savedOffer = offerRepository.save(offer);
+
+        return offerMapper.toResponse(savedOffer);
     }
 
     @Override
@@ -86,13 +99,17 @@ public class OfferServiceImpl implements OfferService {
         ItemRequest itemRequest = offer.getItemRequest();
 
         if (itemRequest.getStatus() != ItemRequestStatus.OPEN) {
-            throw new IllegalItemRequestStateException(
+            throw new InvalidStateException(
+                    "Item request",
+                    itemRequest.getStatus(),
                     "The offer cannot be edited because the item request is no longer OPEN"
             );
         }
 
         if (offer.getStatus() != OfferStatus.PENDING) {
-            throw new IllegalOfferStateException(
+            throw new InvalidStateException(
+                    "Offer",
+                    offer.getStatus(),
                     "Only a PENDING offer can be edited"
             );
         }
@@ -128,14 +145,20 @@ public class OfferServiceImpl implements OfferService {
     public void withdrawOffer(UUID offerId, String authenticatedOwnerId) {
         Offer offer = getOwnedOffer(offerId, authenticatedOwnerId);
 
-        if (offer.getItemRequest().getStatus() != ItemRequestStatus.OPEN) {
-            throw new IllegalItemRequestStateException(
+        ItemRequest itemRequest = offer.getItemRequest();
+
+        if (itemRequest.getStatus() != ItemRequestStatus.OPEN) {
+            throw new InvalidStateException(
+                    "Item request",
+                    itemRequest.getStatus(),
                     "The offer cannot be withdrawn because the request is no longer OPEN"
             );
         }
 
         if (offer.getStatus() != OfferStatus.PENDING) {
-            throw new IllegalOfferStateException(
+            throw new InvalidStateException(
+                    "Offer",
+                    offer.getStatus(),
                     "Only a PENDING offer can be withdrawn"
             );
         }
@@ -148,7 +171,7 @@ public class OfferServiceImpl implements OfferService {
         return offerRepository
                 .findByIdAndOwnerId(offerId, authenticatedOwnerId)
                 .orElseThrow(
-                        () -> new OfferNotFoundException(offerId)
+                        () -> new NotFoundException("Offer id not found" +offerId)
                 );
     }
 
@@ -171,16 +194,19 @@ public class OfferServiceImpl implements OfferService {
         ItemRequest request = getOwnedRequest(requestId, authenticatedCustomerId);
 
         if (request.getStatus() != ItemRequestStatus.OPEN) {
-            throw new IllegalItemRequestStateException(
+            throw new InvalidStateException(
+                    "Item request",
+                    request.getStatus(),
                     "Only an OPEN request can accept an offer"
             );
         }
 
         Offer selectedOffer = getOffer(requestId, offerId);
 
-        if (selectedOffer.getStatus()
-                != OfferStatus.PENDING) {
-            throw new IllegalOfferStateException(
+        if (selectedOffer.getStatus() != OfferStatus.PENDING) {
+            throw new InvalidStateException(
+                    "Offer",
+                    selectedOffer.getStatus(),
                     "Only a PENDING offer can be accepted"
             );
         }
@@ -193,9 +219,13 @@ public class OfferServiceImpl implements OfferService {
 
         for (Offer offer : pendingOffers) {
             if (offer.getId().equals(offerId)) {
-                offer.setStatus(OfferStatus.ACCEPTED);
+                offer.setStatus(
+                        OfferStatus.ACCEPTED
+                );
             } else {
-                offer.setStatus(OfferStatus.REJECTED);
+                offer.setStatus(
+                        OfferStatus.REJECTED
+                );
             }
         }
 
@@ -211,9 +241,10 @@ public class OfferServiceImpl implements OfferService {
     @Transactional
     public OfferResponse rejectOffer(UUID requestId, UUID offerId, String authenticatedCustomerId) {
         ItemRequest request = getOwnedRequest(requestId, authenticatedCustomerId);
-
         if (request.getStatus() != ItemRequestStatus.OPEN) {
-            throw new IllegalItemRequestStateException(
+            throw new InvalidStateException(
+                    "Item request",
+                    request.getStatus(),
                     "Offers can only be rejected while the request is OPEN"
             );
         }
@@ -221,15 +252,19 @@ public class OfferServiceImpl implements OfferService {
         Offer offer = getOffer(requestId, offerId);
 
         if (offer.getStatus() != OfferStatus.PENDING) {
-            throw new IllegalOfferStateException(
+            throw new InvalidStateException(
+                    "Offer",
+                    offer.getStatus(),
                     "Only a PENDING offer can be rejected"
             );
         }
 
         offer.setStatus(OfferStatus.REJECTED);
+        Offer savedOffer = offerRepository.save(offer);
 
-        return offerMapper.toResponse(offerRepository.save(offer));
+        return offerMapper.toResponse(savedOffer);
     }
+
 
     @Override
     public PageResponse<OfferResponse> getMyOffers(
@@ -258,13 +293,16 @@ public class OfferServiceImpl implements OfferService {
     }
 
     private ItemRequest getOpenRequest(UUID requestId) {
-        ItemRequest request = itemRequestRepository.findById(requestId)
-                .orElseThrow(
-                        () -> new ItemRequestNotFoundException(requestId)
-                );
+        ItemRequest request = itemRequestRepository
+                        .findById(requestId)
+                        .orElseThrow(
+                                () -> new NotFoundException("Item request", requestId)
+                        );
 
         if (request.getStatus() != ItemRequestStatus.OPEN) {
-            throw new IllegalItemRequestStateException(
+            throw new InvalidStateException(
+                    "Item request",
+                    request.getStatus(),
                     "Offers can only be submitted for OPEN requests"
             );
         }
@@ -273,34 +311,37 @@ public class OfferServiceImpl implements OfferService {
     }
 
     private ItemRequest getOwnedRequest(UUID requestId, String authenticatedCustomerId) {
-        ItemRequest request = itemRequestRepository.findById(requestId)
-                .orElseThrow(
-                        () -> new ItemRequestNotFoundException(
-                                requestId
-                        )
-                );
+        ItemRequest request = itemRequestRepository
+                        .findById(requestId)
+                        .orElseThrow(
+                                () -> new NotFoundException("Item request", requestId)
+                        );
 
-        if (!request.getCustomerId().equals(authenticatedCustomerId)) {
-            throw new ItemRequestAccessDeniedException();
+        if (authenticatedCustomerId == null || !request.getCustomerId()
+                .equals(authenticatedCustomerId)) {
+            throw new ForbiddenException(
+                    "Item request", "Only the request owner can perform this operation");
         }
 
         return request;
     }
 
+
     private Offer getOffer(UUID requestId, UUID offerId) {
         return offerRepository
                 .findByIdAndItemRequestId(offerId, requestId)
                 .orElseThrow(
-                        () -> new OfferNotFoundException(
-                                offerId
-                        )
+                        () -> new NotFoundException("Item request", requestId)
                 );
     }
 
     private void verifyOfferOwner(Offer offer, String authenticatedOwnerId) {
         if (!offer.getOwnerId()
                 .equals(authenticatedOwnerId)) {
-            throw new OfferAccessDeniedException();
+            throw new ForbiddenException(
+                    "Item request",
+                    "Only the request owner can perform this operation"
+            );
         }
     }
 
@@ -310,11 +351,13 @@ public class OfferServiceImpl implements OfferService {
         }
 
         Item item = itemRepository.findByIdAndDeletedFalse(itemId).orElseThrow(
-                        () -> new ItemNotFoundException(itemId)
+                () -> new NotFoundException("Item", itemId)
                 );
 
         if (!item.getOwnerId().equals(authenticatedOwnerId)) {
-            throw new OfferAccessDeniedException();
+            throw new ForbiddenException(
+                    "Item", "Only the item owner can include this item in an offer"
+            );
         }
 
         return item;

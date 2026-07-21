@@ -1,12 +1,12 @@
 package co.istad.rentiq_api.features.item.service.impl;
 
-import co.istad.rentiq_api.exception.ItemAccessDeniedException;
-import co.istad.rentiq_api.exception.ItemNotFoundException;
-import co.istad.rentiq_api.features.item.dto.respone.PageResponse;
+import co.istad.rentiq_api.common.exception.ForbiddenException;
+import co.istad.rentiq_api.common.exception.NotFoundException;
 import co.istad.rentiq_api.features.item.dto.request.CreateItemRequest;
 import co.istad.rentiq_api.features.item.dto.request.ItemFilter;
 import co.istad.rentiq_api.features.item.dto.request.UpdateItemRequest;
 import co.istad.rentiq_api.features.item.dto.respone.ItemResponse;
+import co.istad.rentiq_api.features.item.dto.respone.PageResponse;
 import co.istad.rentiq_api.features.item.entity.Item;
 import co.istad.rentiq_api.features.item.enums.ItemApprovalStatus;
 import co.istad.rentiq_api.features.item.enums.ItemStatus;
@@ -50,7 +50,6 @@ public class ItemServiceImpl implements ItemService {
     @Override
     @Transactional
     public ItemResponse createItem(CreateItemRequest request, String authenticatedUserId) {
-
         Item item = itemMapper.toEntity(request, authenticatedUserId);
         Item savedItem = itemRepository.save(item);
 
@@ -59,13 +58,14 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public ItemResponse getPublicItemById(UUID itemId) {
-        Item item = itemRepository
-                .findByIdAndDeletedFalseAndApprovalStatusAndStatus(
+        Item item = itemRepository.findByIdAndDeletedFalseAndApprovalStatusAndStatus(
                         itemId,
                         ItemApprovalStatus.APPROVED,
                         ItemStatus.ACTIVE
                 )
-                .orElseThrow(() -> new ItemNotFoundException(itemId));
+                .orElseThrow(
+                        () -> new NotFoundException("Item", itemId)
+                );
 
         return itemMapper.toResponse(item);
     }
@@ -122,25 +122,13 @@ public class ItemServiceImpl implements ItemService {
         Item item = getOwnedItem(itemId, authenticatedUserId);
 
         boolean hasImportantChanges = hasImportantChanges(request);
-
         itemMapper.updateEntity(
                 request,
                 item
         );
 
-        /*
-         * listing return to PENDING when important
-         * listing information change.
-         */
-        if (
-                hasImportantChanges
-                        && item.getApprovalStatus()
-                        == ItemApprovalStatus.APPROVED
-        ) {
-            item.setApprovalStatus(
-                    ItemApprovalStatus.PENDING
-            );
-
+        if (hasImportantChanges && item.getApprovalStatus() == ItemApprovalStatus.APPROVED) {
+            item.setApprovalStatus(ItemApprovalStatus.PENDING);
             item.setApprovedBy(null);
             item.setApprovedAt(null);
             item.setRejectionReason(null);
@@ -154,19 +142,18 @@ public class ItemServiceImpl implements ItemService {
     @Override
     @Transactional
     public ItemResponse updateAvailability(UUID itemId, boolean available, String authenticatedUserId) {
-
         Item item = getOwnedItem(itemId, authenticatedUserId);
+
         item.setAvailable(available);
         Item updatedItem = itemRepository.save(item);
-
         return itemMapper.toResponse(updatedItem);
     }
 
     @Override
     @Transactional
     public ItemResponse updateStatus(UUID itemId, ItemStatus status, String authenticatedUserId) {
-
         Item item = getOwnedItem(itemId, authenticatedUserId);
+
         item.setStatus(status);
         Item updatedItem = itemRepository.save(item);
 
@@ -187,13 +174,19 @@ public class ItemServiceImpl implements ItemService {
     }
 
     private Item getOwnedItem(UUID itemId, String authenticatedUserId) {
-        Item item = itemRepository.findByIdAndDeletedFalse(itemId)
+        Item item = itemRepository
+                .findByIdAndDeletedFalse(itemId)
                 .orElseThrow(
-                        () -> new ItemNotFoundException(itemId)
+                        () -> new NotFoundException("Item", itemId)
                 );
 
-        if (!item.getOwnerId().equals(authenticatedUserId)) {
-            throw new ItemAccessDeniedException();
+        if (authenticatedUserId == null || !item.getOwnerId()
+                .equals(authenticatedUserId)) {
+
+            throw new ForbiddenException(
+                    "Item",
+                    "Only the item owner can perform this operation"
+            );
         }
 
         return item;
@@ -204,20 +197,13 @@ public class ItemServiceImpl implements ItemService {
 
         int safePageSize = Math.clamp(pageSize, 1, MAXIMUM_PAGE_SIZE);
 
-        String safeSortField =
-                validateSortField(sortBy);
+        String safeSortField = validateSortField(sortBy);
 
-        Sort.Direction direction =
-                "asc".equalsIgnoreCase(sortDirection)
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDirection)
                         ? Sort.Direction.ASC
                         : Sort.Direction.DESC;
 
-        return PageRequest.of(safePageNumber, safePageSize,
-                Sort.by(
-                        direction,
-                        safeSortField
-                )
-        );
+        return PageRequest.of(safePageNumber, safePageSize, Sort.by(direction, safeSortField));
     }
 
     private String validateSortField(String sortBy) {
