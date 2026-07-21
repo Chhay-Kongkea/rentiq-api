@@ -18,6 +18,10 @@ repositories {
 }
 
 dependencies {
+
+
+	implementation 'org.locationtech.jts:jts-core:1.19.0'
+
 	implementation 'org.keycloak:keycloak-admin-client:26.0.9'
 	implementation 'org.mapstruct:mapstruct:1.6.3'
 

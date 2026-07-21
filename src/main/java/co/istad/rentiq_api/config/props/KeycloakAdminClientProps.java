@@ -14,7 +14,7 @@ public class KeycloakAdminClientProps {
 
     private String serverUrl;
     private String clientId;
-    private String clientSecrete;
+    private String clientSecret;
     private String realm;
     private String targetRealm;
 

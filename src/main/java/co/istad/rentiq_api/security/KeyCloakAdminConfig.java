@@ -19,11 +19,12 @@ public class KeyCloakAdminConfig {
 
     @Bean
     public Keycloak configKeycloak(){
+
         return KeycloakBuilder.builder()
                 .serverUrl(props.getServerUrl())
                 .realm(props.getTargetRealm())
                 .clientId(props.getClientId())
-                .clientSecret(props.getClientSecrete())
+                .clientSecret(props.getClientSecret())
                 .grantType(OAuth2Constants.CLIENT_CREDENTIALS)
                 .build();
 

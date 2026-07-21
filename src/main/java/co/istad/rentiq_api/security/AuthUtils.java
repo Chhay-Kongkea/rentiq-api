@@ -39,4 +39,31 @@ public final class AuthUtils {
         return SecurityContextHolder.getContext().getAuthentication();
     }
 
+
+    public static String extractUsername() {
+        return claim("preferred_username");
+    }
+
+    public static String extractEmail() {
+        return claim("email");
+    }
+
+    public static String extractFirstName() {
+        return claim("given_name");
+    }
+
+    public static String extractLastName() {
+        return claim("family_name");
+    }
+
+    private static String claim(String claimName) {
+        Authentication auth = getAuth();
+        if (auth instanceof AnonymousAuthenticationToken) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You have been forbidden");
+        }
+        JwtAuthenticationToken jwtAuth = (JwtAuthenticationToken) auth;
+        Object value = jwtAuth.getToken().getClaims().get(claimName);
+        return value != null ? value.toString() : null;
+    }
+
 }

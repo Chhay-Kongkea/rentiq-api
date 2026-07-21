@@ -1,9 +1,8 @@
 package co.istad.rentiq_api.features.category;
 
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-
-public interface CategoryRepository{
-
-
+@Repository
+public interface CategoryRepository extends JpaRepository<Category, Integer> {
 }

@@ -1,7 +1,7 @@
 package co.istad.rentiq_api.features.item.service.impl;
 
-import co.istad.rentiq_api.exception.ItemAccessDeniedException;
-import co.istad.rentiq_api.exception.ItemNotFoundException;
+import co.istad.rentiq_api.features.item.exception.ItemAccessDeniedException;
+import co.istad.rentiq_api.features.item.exception.ItemNotFoundException;
 import co.istad.rentiq_api.features.item.dto.respone.PageResponse;
 import co.istad.rentiq_api.features.item.dto.request.CreateItemRequest;
 import co.istad.rentiq_api.features.item.dto.request.ItemFilter;
