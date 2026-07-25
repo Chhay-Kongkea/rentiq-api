@@ -416,6 +416,19 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(AvailabilityBlockNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiErrorResponse handleAvailabilityBlockNotFound(AvailabilityBlockNotFoundException exception, HttpServletRequest request) {
+        return ApiErrorResponse.of(
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                "AVAILABILITY_BLOCK_NOT_FOUND",
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
+    }
+
     @ExceptionHandler(ItemImageNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ApiErrorResponse handleItemImageNotFound(ItemImageNotFoundException exception, HttpServletRequest request) {

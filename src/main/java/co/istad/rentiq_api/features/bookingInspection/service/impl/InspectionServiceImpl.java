@@ -1,7 +1,7 @@
 package co.istad.rentiq_api.features.bookingInspection.service.impl;
 
-import co.istad.rentiq_api.features.booking.entity.Booking; // adjust package
-import co.istad.rentiq_api.features.booking.repository.BookingRepository; // adjust package
+import co.istad.rentiq_api.features.bookings.entity.Booking;
+import co.istad.rentiq_api.features.bookings.repository.BookingRepository;
 import co.istad.rentiq_api.features.bookingInspection.dto.request.AddInspectionImagesRequest;
 import co.istad.rentiq_api.features.bookingInspection.dto.request.InspectionImageInput;
 import co.istad.rentiq_api.features.bookingInspection.dto.request.UpsertInspectionRequest;

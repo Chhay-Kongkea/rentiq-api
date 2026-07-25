@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -134,6 +135,21 @@ public interface ItemRepository
             @Param("longitude") double longitude,
             @Param("radiusKm") double radiusKm,
             @Param("categoryId") Short categoryId,
+            Pageable pageable
+    );
+
+    @Query("""
+            SELECT item FROM Item item
+            WHERE item.deleted = false
+              AND item.approvalStatus =
+                  co.istad.rentiq_api.features.item.enums.ItemApprovalStatus.APPROVED
+              AND item.status =
+                  co.istad.rentiq_api.features.item.enums.ItemStatus.ACTIVE
+              AND item.featured = true
+              AND (item.featuredUntil IS NULL OR item.featuredUntil > :now)
+            """)
+    Page<Item> findFeaturedItems(
+            @Param("now") OffsetDateTime now,
             Pageable pageable
     );
 }

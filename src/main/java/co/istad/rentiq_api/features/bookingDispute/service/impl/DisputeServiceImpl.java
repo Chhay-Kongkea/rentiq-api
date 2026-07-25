@@ -1,7 +1,7 @@
 package co.istad.rentiq_api.features.bookingDispute.service.impl;
 
-import co.istad.rentiq_api.features.booking.entity.Booking;
-import co.istad.rentiq_api.features.booking.repository.BookingRepository;
+import co.istad.rentiq_api.features.bookings.entity.Booking;
+import co.istad.rentiq_api.features.bookings.repository.BookingRepository;
 import co.istad.rentiq_api.features.bookingDispute.dto.request.CreateDisputeRequest;
 import co.istad.rentiq_api.features.bookingDispute.dto.request.ResolveDisputeRequest;
 import co.istad.rentiq_api.features.bookingDispute.dto.request.UpdateDisputeRequest;

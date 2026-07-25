@@ -5,12 +5,15 @@ import co.istad.rentiq_api.exception.ItemNotFoundException;
 import co.istad.rentiq_api.features.item.dto.respone.PageResponse;
 import co.istad.rentiq_api.features.item.dto.request.CreateItemRequest;
 import co.istad.rentiq_api.features.item.dto.request.ItemFilter;
+import co.istad.rentiq_api.features.item.dto.request.NearbyItemFilter;
 import co.istad.rentiq_api.features.item.dto.request.UpdateItemRequest;
 import co.istad.rentiq_api.features.item.dto.respone.ItemResponse;
 import co.istad.rentiq_api.features.item.entity.Item;
 import co.istad.rentiq_api.features.item.enums.ItemApprovalStatus;
+import co.istad.rentiq_api.features.item.enums.ItemAvailabilityState;
 import co.istad.rentiq_api.features.item.enums.ItemStatus;
 import co.istad.rentiq_api.features.item.exception.ItemAccessDeniedException;
+import co.istad.rentiq_api.features.item.exception.InvalidItemOperationException;
 import co.istad.rentiq_api.features.item.mapper.ItemMapper;
 import co.istad.rentiq_api.features.item.repository.ItemRepository;
 import co.istad.rentiq_api.features.item.service.ItemService;
@@ -118,6 +121,41 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
+    public PageResponse<ItemResponse> getFeaturedItems(int pageNumber, int pageSize) {
+        int safePageNumber = Math.max(pageNumber, 0);
+        int safePageSize = Math.clamp(pageSize, 1, MAXIMUM_PAGE_SIZE);
+
+        Pageable pageable = PageRequest.of(
+                safePageNumber,
+                safePageSize,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        Page<ItemResponse> page = itemRepository
+                .findFeaturedItems(OffsetDateTime.now(), pageable)
+                .map(itemMapper::toResponse);
+
+        return PageResponse.from(page);
+    }
+
+    @Override
+    public PageResponse<ItemResponse> getNearbyItems(NearbyItemFilter filter) {
+        Pageable pageable = PageRequest.of(filter.pageNumber(), filter.pageSize());
+
+        Page<ItemResponse> page = itemRepository
+                .searchNearby(
+                        filter.latitude(),
+                        filter.longitude(),
+                        filter.radiusKm(),
+                        filter.categoryId(),
+                        pageable
+                )
+                .map(itemMapper::toResponse);
+
+        return PageResponse.from(page);
+    }
+
+    @Override
     @Transactional
     public ItemResponse updateItem(UUID itemId, UpdateItemRequest request, String authenticatedUserId) {
         Item item = getOwnedItem(itemId, authenticatedUserId);
@@ -154,10 +192,22 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     @Transactional
-    public ItemResponse updateAvailability(UUID itemId, boolean available, String authenticatedUserId) {
+    public ItemResponse updateAvailability(UUID itemId, ItemAvailabilityState availability, String authenticatedUserId) {
 
         Item item = getOwnedItem(itemId, authenticatedUserId);
-        item.setAvailable(available);
+
+        switch (availability) {
+            case AVAILABLE -> {
+                item.setAvailable(true);
+                item.setStatus(ItemStatus.ACTIVE);
+            }
+            case UNAVAILABLE -> item.setAvailable(false);
+            case HIDDEN -> {
+                item.setAvailable(false);
+                item.setStatus(ItemStatus.HIDDEN);
+            }
+        }
+
         Item updatedItem = itemRepository.save(item);
 
         return itemMapper.toResponse(updatedItem);
@@ -185,6 +235,75 @@ public class ItemServiceImpl implements ItemService {
         item.setStatus(ItemStatus.HIDDEN);
 
         itemRepository.save(item);
+    }
+
+    @Override
+    @Transactional
+    public ItemResponse adminApproveItem(UUID itemId, String adminId) {
+        Item item = itemRepository.findByIdAndDeletedFalse(itemId)
+                .orElseThrow(() -> new ItemNotFoundException(itemId));
+
+        if (item.getApprovalStatus() == ItemApprovalStatus.APPROVED) {
+            throw new InvalidItemOperationException("Item is already approved");
+        }
+
+        item.setApprovalStatus(ItemApprovalStatus.APPROVED);
+        item.setApprovedBy(adminId);
+        item.setApprovedAt(OffsetDateTime.now());
+        item.setRejectionReason(null);
+
+        Item updatedItem = itemRepository.save(item);
+
+        return itemMapper.toResponse(updatedItem);
+    }
+
+    @Override
+    @Transactional
+    public ItemResponse adminRejectItem(UUID itemId, String reason, String adminId) {
+        Item item = itemRepository.findByIdAndDeletedFalse(itemId)
+                .orElseThrow(() -> new ItemNotFoundException(itemId));
+
+        if (item.getApprovalStatus() == ItemApprovalStatus.REJECTED) {
+            throw new InvalidItemOperationException("Item is already rejected");
+        }
+
+        item.setApprovalStatus(ItemApprovalStatus.REJECTED);
+        item.setApprovedBy(adminId);
+        item.setApprovedAt(null);
+        item.setRejectionReason(reason);
+
+        Item updatedItem = itemRepository.save(item);
+
+        return itemMapper.toResponse(updatedItem);
+    }
+
+    @Override
+    @Transactional
+    public void adminRemoveItem(UUID itemId) {
+        Item item = itemRepository.findByIdAndDeletedFalse(itemId)
+                .orElseThrow(() -> new ItemNotFoundException(itemId));
+
+        item.setApprovalStatus(ItemApprovalStatus.REMOVED);
+        item.setDeleted(true);
+        item.setDeletedAt(OffsetDateTime.now());
+        item.setAvailable(false);
+        item.setStatus(ItemStatus.HIDDEN);
+
+        itemRepository.save(item);
+    }
+
+    @Override
+    @Transactional
+    public ItemResponse adminSetFeatured(UUID itemId, boolean featured, OffsetDateTime featuredUntil) {
+        Item item = itemRepository.findByIdAndDeletedFalse(itemId)
+                .orElseThrow(() -> new ItemNotFoundException(itemId));
+
+        item.setFeatured(featured);
+        item.setFeaturedUntil(featured ? featuredUntil : null);
+
+        Item updatedItem = itemRepository.save(item);
+
+        return itemMapper.toResponse(updatedItem);
     }
 
     private Item getOwnedItem(UUID itemId, String authenticatedUserId) {

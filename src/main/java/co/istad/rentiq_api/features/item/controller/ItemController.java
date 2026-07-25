@@ -63,6 +63,29 @@ public class ItemController {
         return ResponseEntity.ok(itemService.getPublicItemById(itemId));
     }
 
+    @GetMapping("/items/featured")
+    public ResponseEntity<PageResponse<ItemResponse>> getFeaturedItems(
+            @RequestParam(defaultValue = "0")
+            @Min(value = 0, message = "Page number cannot be negative")
+            int pageNumber,
+
+            @RequestParam(defaultValue = "12")
+            @Min(value = 1, message = "Page size must be at least 1")
+            @Max(value = 100, message = "Page size cannot exceed 100")
+            int pageSize
+    ) {
+        return ResponseEntity.ok(itemService.getFeaturedItems(pageNumber, pageSize));
+    }
+
+    @GetMapping("/items/nearby")
+    public ResponseEntity<PageResponse<ItemResponse>> getNearbyItems(
+            @Valid
+            @ModelAttribute
+            NearbyItemFilter filter
+    ) {
+        return ResponseEntity.ok(itemService.getNearbyItems(filter));
+    }
+
     @PostMapping("/items")
     @PreAuthorize("hasRole('VENDOR')")
     public ResponseEntity<ItemResponse> createItem(
@@ -124,7 +147,7 @@ public class ItemController {
 
             Authentication authentication
     ) {
-        return ResponseEntity.ok(itemService.updateAvailability(itemId, request.available(), authentication.getName()));
+        return ResponseEntity.ok(itemService.updateAvailability(itemId, request.availability(), authentication.getName()));
     }
 
 
