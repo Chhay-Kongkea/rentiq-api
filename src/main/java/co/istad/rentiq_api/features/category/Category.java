@@ -1,12 +1,8 @@
 package co.istad.rentiq_api.features.category;
 
-import co.istad.rentiq_api.config.auditing.BasedEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+
+import co.istad.rentiq_api.common.config.auditing.BasedEntity;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -22,7 +18,6 @@ public class Category extends BasedEntity {
 
     @Column(name = "parent_id")
     private Integer parentId;
-
 
     @Column(nullable = false)
     private String name;

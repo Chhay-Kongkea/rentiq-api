@@ -2,17 +2,11 @@ spring:
   application:
     name: rentiq-api
 
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${ISSUER_URI}
-
   datasource:
-    url: ${DB_URL}
+    url: ${DB_URL:jdbc:postgresql://localhost:5435/rentiq_db}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
 
   jpa:
     hibernate:
@@ -23,6 +17,13 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${ISSUER_URI:http://127.0.0.1:8080/realms/elearning-001}
 
   servlet:
     multipart:
@@ -33,13 +34,13 @@ server:
   port: 8282
 
 keycloak:
-  server-url: ${SERVER_URL}
-  client-id: ${CLIENT_ID}
-  client-secret: ${CLIENT_SECRET}
-  realm: ${REALM}
-  target-realm: ${TARGET_REALM}
+  server-url: ${SERVER_URL:http://127.0.0.1:8080}
+  client-id: ${CLIENT_ID:spring-boot-eleaning-002}
+  client-secret: ${CLIENT_SECRET:}
+  realm: ${REALM:master}
+  target-realm: ${TARGET_REALM:elearning-001}
 
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME}
-  api-key: ${CLOUDINARY_API_KEY}
-  api-secret: ${CLOUDINARY_API_SECRET}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+  api-key: ${CLOUDINARY_API_KEY:}
+  api-secret: ${CLOUDINARY_API_SECRET:}

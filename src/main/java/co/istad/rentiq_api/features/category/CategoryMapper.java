@@ -1,23 +1,16 @@
 package co.istad.rentiq_api.features.category;
 
+import co.istad.rentiq_api.features.category.cateogryDto.CategoryRequest;
+import co.istad.rentiq_api.features.category.cateogryDto.CategoryResponse;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.MappingTarget;
 
-import java.util.List;
-
-@Mapper(
-        componentModel = "spring",
-        nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE
-)
+@Mapper(componentModel = "spring")
 public interface CategoryMapper {
 
     CategoryResponse toResponse(Category category);
 
-    List<CategoryResponse> toResponseList(List<Category> categories);
-
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "lastModifiedAt", ignore = true)
     Category toEntity(CategoryRequest request);
+
+    void updateEntityFromRequest(CategoryRequest request, @MappingTarget Category category);
 }

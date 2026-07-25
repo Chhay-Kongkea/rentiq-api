@@ -1,5 +1,8 @@
 package co.istad.rentiq_api.features.category;
 
+import co.istad.rentiq_api.features.category.cateogryDto.CategoryRequest;
+import co.istad.rentiq_api.features.category.cateogryDto.CategoryResponse;
+
 import java.util.List;
 import java.util.Map;
 

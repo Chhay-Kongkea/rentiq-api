@@ -1,23 +1,22 @@
 package co.istad.rentiq_api.features.category;
 
+import co.istad.rentiq_api.features.category.cateogryDto.CategoryRequest;
+import co.istad.rentiq_api.features.category.cateogryDto.CategoryResponse;
 import co.istad.rentiq_api.features.category.exception.CategoryNotFoundException;
 import co.istad.rentiq_api.features.category.exception.DuplicateCategoryException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
 
-    public CategoryServiceImpl(CategoryRepository categoryRepository,
-                               CategoryMapper categoryMapper) {
-        this.categoryRepository = categoryRepository;
-        this.categoryMapper = categoryMapper;
-    }
     @Override
     public List<CategoryResponse> getAllCategories() {
         return categoryRepository.findAll().stream()
@@ -27,7 +26,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public CategoryResponse getCategoryById(Integer id) {
-        return toResponse(findCategoryOrThrow(id));
+        return categoryMapper.toResponse(findCategoryOrThrow(id));
     }
 
     @Override
@@ -49,29 +48,16 @@ public class CategoryServiceImpl implements CategoryService {
             throw new DuplicateCategoryException(request.name());
         }
 
-        Category category = new Category();
-        category.setParentId(request.parentId());
-        category.setName(request.name());
-        category.setSlug(request.slug());
-        category.setCommissionRate(request.commissionRate());
-        category.setIconUrl(request.iconUrl());
-        category.setActive(request.active());
-
+        Category category = categoryMapper.toEntity(request);
         Category saved = categoryRepository.save(category);
-        return toResponse(saved);
+        return categoryMapper.toResponse(saved);
     }
 
     @Override
     public CategoryResponse updateCategory(Integer id, CategoryRequest request) {
         Category category = findCategoryOrThrow(id);
-        category.setParentId(request.parentId());
-        category.setName(request.name());
-        category.setSlug(request.slug());
-        category.setCommissionRate(request.commissionRate());
-        category.setIconUrl(request.iconUrl());
-        category.setActive(request.active());
-
-        return toResponse(categoryRepository.save(category));
+        categoryMapper.updateEntityFromRequest(request, category);
+        return categoryMapper.toResponse(categoryRepository.save(category));
     }
 
     @Override
@@ -84,14 +70,14 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryResponse updateCommissionRate(Integer id, Double commissionRate) {
         Category category = findCategoryOrThrow(id);
         category.setCommissionRate(commissionRate);
-        return toResponse(categoryRepository.save(category));
+        return categoryMapper.toResponse(categoryRepository.save(category));
     }
 
     @Override
     public CategoryResponse updateStatus(Integer id, Boolean active) {
         Category category = findCategoryOrThrow(id);
         category.setActive(active);
-        return toResponse(categoryRepository.save(category));
+        return categoryMapper.toResponse(categoryRepository.save(category));
     }
 
     private Category findCategoryOrThrow(Integer id) {
@@ -99,15 +85,4 @@ public class CategoryServiceImpl implements CategoryService {
                 .orElseThrow(() -> new CategoryNotFoundException(id));
     }
 
-    private CategoryResponse toResponse(Category category) {
-        return new CategoryResponse(
-                category.getId(),
-                category.getParentId(),
-                category.getName(),
-                category.getSlug(),
-                category.getCommissionRate(),
-                category.getIconUrl(),
-                category.getActive()
-        );
-    }
 }

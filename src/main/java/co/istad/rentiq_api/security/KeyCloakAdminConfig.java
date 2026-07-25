@@ -1,7 +1,7 @@
 package co.istad.rentiq_api.security;
 
 
-import co.istad.rentiq_api.config.props.KeycloakAdminClientProps;
+import co.istad.rentiq_api.common.config.props.KeycloakAdminClientProps;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.OAuth2Constants;
@@ -19,11 +19,12 @@ public class KeyCloakAdminConfig {
 
     @Bean
     public Keycloak configKeycloak(){
+
         return KeycloakBuilder.builder()
                 .serverUrl(props.getServerUrl())
                 .realm(props.getTargetRealm())
                 .clientId(props.getClientId())
-                .clientSecret(props.getClientSecrete())
+                .clientSecret(props.getClientSecret())
                 .grantType(OAuth2Constants.CLIENT_CREDENTIALS)
                 .build();
 
