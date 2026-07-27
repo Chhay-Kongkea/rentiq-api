@@ -14,6 +14,7 @@ import co.istad.rentiq_api.features.category.exception.DuplicateCategoryExceptio
 import co.istad.rentiq_api.features.item.exception.*;
 import co.istad.rentiq_api.features.userProfile.exception.UserProfileException;
 import co.istad.rentiq_api.features.kyc.exception.KycException;
+import co.istad.rentiq_api.features.wallet.exception.WalletException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
@@ -23,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
@@ -323,10 +325,10 @@ public class GlobalExceptionHandler {
 
 
     @ExceptionHandler(ResponseStatusException.class)
-    public ApiErrorResponse handleResponseStatusException(ResponseStatusException exception, HttpServletRequest request) {
+    public ResponseEntity<ApiErrorResponse> handleResponseStatusException(ResponseStatusException exception, HttpServletRequest request) {
         HttpStatus status = HttpStatus.valueOf(exception.getStatusCode().value());
         log.warn("ResponseStatusException: {}", exception.getReason());
-        return ApiErrorResponse.of(
+        ApiErrorResponse errorResponse = ApiErrorResponse.of(
                 status.value(),
                 status.getReasonPhrase(),
                 "REQUEST_ERROR",
@@ -334,6 +336,7 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 Map.of()
         );
+        return ResponseEntity.status(status).body(errorResponse);
     }
 
 
@@ -471,10 +474,10 @@ public class GlobalExceptionHandler {
 
 
     @ExceptionHandler(AuthException.class)
-    public ApiErrorResponse handleAuth(AuthException exception, HttpServletRequest request) {
+    public ResponseEntity<ApiErrorResponse> handleAuth(AuthException exception, HttpServletRequest request) {
         log.warn("Authentication error: {}", exception.getMessage());
         HttpStatus status = exception.getStatus();
-        return ApiErrorResponse.of(
+        ApiErrorResponse errorResponse = ApiErrorResponse.of(
                 status.value(),
                 status.getReasonPhrase(),
                 "AUTH_ERROR",
@@ -482,13 +485,14 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 Map.of()
         );
+        return ResponseEntity.status(status).body(errorResponse);
     }
 
     @ExceptionHandler(UserProfileException.class)
-    public ApiErrorResponse handleUserProfile(UserProfileException exception, HttpServletRequest request) {
+    public ResponseEntity<ApiErrorResponse> handleUserProfile(UserProfileException exception, HttpServletRequest request) {
         log.warn("User profile error: {}", exception.getMessage());
         HttpStatus status = exception.getStatus();
-        return ApiErrorResponse.of(
+        ApiErrorResponse errorResponse = ApiErrorResponse.of(
                 status.value(),
                 status.getReasonPhrase(),
                 "USER_PROFILE_ERROR",
@@ -496,13 +500,14 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 Map.of()
         );
+        return ResponseEntity.status(status).body(errorResponse);
     }
 
     @ExceptionHandler(KycException.class)
-    public ApiErrorResponse handleKyc(KycException exception, HttpServletRequest request) {
+    public ResponseEntity<ApiErrorResponse> handleKyc(KycException exception, HttpServletRequest request) {
         log.warn("KYC error: {}", exception.getMessage());
         HttpStatus status = exception.getStatus();
-        return ApiErrorResponse.of(
+        ApiErrorResponse errorResponse = ApiErrorResponse.of(
                 status.value(),
                 status.getReasonPhrase(),
                 "KYC_ERROR",
@@ -510,6 +515,23 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 Map.of()
         );
+        return ResponseEntity.status(status).body(errorResponse);
+    }
+
+
+    @ExceptionHandler(WalletException.class)
+    public ResponseEntity<ApiErrorResponse> handleWallet(WalletException exception, HttpServletRequest request) {
+        log.warn("Wallet error: {}", exception.getMessage());
+        HttpStatus status = exception.getStatus();
+        ApiErrorResponse errorResponse = ApiErrorResponse.of(
+                status.value(),
+                status.getReasonPhrase(),
+                "WALLET_ERROR",
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
+        return ResponseEntity.status(status).body(errorResponse);
     }
 
 
