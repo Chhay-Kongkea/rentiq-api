@@ -98,7 +98,6 @@ BookingServiceImpl implements BookingService {
 
         BigDecimal commissionRate = categoryRepository.findById((int) item.getCategoryId())
                 .map(Category::getCommissionRate)
-                .map(BigDecimal::valueOf)
                 .orElse(BigDecimal.ZERO);
         BigDecimal commissionAmount = subtotal.multiply(commissionRate).setScale(2, RoundingMode.HALF_UP);
 
