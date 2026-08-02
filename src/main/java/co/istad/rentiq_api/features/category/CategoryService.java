@@ -3,6 +3,7 @@ package co.istad.rentiq_api.features.category;
 import co.istad.rentiq_api.features.category.cateogryDto.CategoryRequest;
 import co.istad.rentiq_api.features.category.cateogryDto.CategoryResponse;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -21,7 +22,7 @@ public interface CategoryService {
 
     void deleteCategory(Integer id);
 
-    CategoryResponse updateCommissionRate(Integer id, Double commissionRate);
+    CategoryResponse updateCommissionRate(Integer id, BigDecimal commissionRate);
 
     CategoryResponse updateStatus(Integer id, Boolean active);
 }
