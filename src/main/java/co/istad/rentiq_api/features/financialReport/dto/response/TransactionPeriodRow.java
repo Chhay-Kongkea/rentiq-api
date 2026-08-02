@@ -1,0 +1,15 @@
+package co.istad.rentiq_api.features.financialReport.dto.response;
+
+import co.istad.rentiq_api.features.wallet.enums.TransactionDirection;
+import co.istad.rentiq_api.features.wallet.enums.TransactionType;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+public record TransactionPeriodRow(
+        LocalDate period,
+        TransactionType transactionType,
+        TransactionDirection direction,
+        BigDecimal totalAmount,
+        long transactionCount
+) {}
