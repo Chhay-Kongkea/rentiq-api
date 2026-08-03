@@ -3,34 +3,44 @@ spring:
     name: rentiq-api
 
   datasource:
-#    url: ${DB_URL:jdbc:postgresql://localhost:5435/rentiq_db}
-#    username: ${DB_USER:postgres}
-#    password: ${DB_PASSWORD:postgres}
-#    driver-class-name: org.postgresql.Driver
-
-
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
+    url: "jdbc:postgresql://${RENDER_DB_HOST}:${RENDER_DB_PORT:5432}/${RENDER_DB_NAME}?sslmode=require"
+    username: "${RENDER_DB_USERNAME}"
+    password: "${RENDER_DB_PASSWORD}"
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
 
     show-sql: true
 
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
 
   security:
     oauth2:
+      client:
+        registration:
+          keycloak:
+            provider: keycloak
+            client-id: "${CLIENT_ID:rentiq-client}"
+            client-secret: "${CLIENT_SECRET}"
+            client-authentication-method: client_secret_basic
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - openid
+              - profile
+              - email
+
+        provider:
+          keycloak:
+            issuer-uri: "${ISSUER_URI:http://localhost:8080/realms/rentiq-app}"
+
       resourceserver:
         jwt:
-          issuer-uri: ${ISSUER_URI:http://127.0.0.1:8080/realms/elearning-001}
-
+          issuer-uri: "${ISSUER_URI:http://localhost:8080/realms/rentiq-app}"
   servlet:
     multipart:
       max-file-size: 10MB
@@ -40,13 +50,14 @@ server:
   port: 8282
 
 keycloak:
-  server-url: ${SERVER_URL:http://127.0.0.1:8080}
-  client-id: ${CLIENT_ID:spring-boot-eleaning-002}
-  client-secret: ${CLIENT_SECRET:}
-  realm: ${REALM:master}
-  target-realm: ${TARGET_REALM:elearning-001}
+  server-url: "${SERVER_URL:http://127.0.0.1:8080}"
+  client-id: "${CLIENT_ID:rentiq-client}"
+  client-secret: "${CLIENT_SECRET}"
+  realm: "${REALM:master}"
+  target-realm: "${TARGET_REALM:rentiq-app}"
+  redirect-uri: "http://localhost:8081/auth/callback"
 
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
-  api-key: ${CLOUDINARY_API_KEY:}
-  api-secret: ${CLOUDINARY_API_SECRET:}
+  cloud-name: "${CLOUDINARY_CLOUD_NAME}"
+  api-key: "${CLOUDINARY_API_KEY}"
+  api-secret: "${CLOUDINARY_API_SECRET}"

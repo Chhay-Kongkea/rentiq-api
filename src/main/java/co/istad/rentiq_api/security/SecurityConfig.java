@@ -4,12 +4,16 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestCustomizers;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
@@ -26,20 +30,32 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            JwtAuthenticationConverter jwtAuthenticationConverter
+            JwtAuthenticationConverter jwtAuthenticationConverter,
+            ClientRegistrationRepository clientRegistrationRepository
     ) throws Exception {
+
+        DefaultOAuth2AuthorizationRequestResolver authorizationRequestResolver =
+                new DefaultOAuth2AuthorizationRequestResolver(
+                        clientRegistrationRepository,
+                        "/oauth2/authorization"
+                );
+
+        authorizationRequestResolver.setAuthorizationRequestCustomizer(
+                OAuth2AuthorizationRequestCustomizers.withPkce()
+        );
 
         http
                 .csrf(AbstractHttpConfigurer::disable)
 
+                .cors(Customizer.withDefaults())
+
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
-                                SessionCreationPolicy.STATELESS
+                                SessionCreationPolicy.IF_REQUIRED
                         )
                 )
 
                 .authorizeHttpRequests(auth -> auth
-
 
                         .requestMatchers(
                                 "/v3/api-docs",
@@ -52,14 +68,26 @@ public class SecurityConfig {
                         )
                         .permitAll()
 
-
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/v1/auth/register",
-                                "/api/v1/auth/login",
-                                "/api/v1/auth/refresh-token",
+                                "/api/v1/auth/resend-verification-email",
                                 "/api/v1/auth/forgot-password",
-                                "/api/v1/auth/resend-verification-email"
+                                "/api/v1/auth/refresh-token"
+                        )
+                        .permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/verify-email"
+                        )
+                        .permitAll()
+
+                        .requestMatchers(
+                                "/oauth2/**",
+                                "/login/**",
+                                "/error"
                         )
                         .permitAll()
 
@@ -483,8 +511,27 @@ public class SecurityConfig {
                         .anyRequest()
                         .authenticated()
                 )
+                .oauth2Login(oauth2 -> oauth2
 
-                .oauth2ResourceServer(oauth2 ->
+                        .authorizationEndpoint(endpoint ->
+                                endpoint.authorizationRequestResolver(
+                                        authorizationRequestResolver
+                                )
+                        )
+
+                        .successHandler((request, response, authentication) ->
+                                response.sendRedirect(
+                                        "http://localhost:8081/auth/callback"
+                                )
+                        )
+
+                        .failureHandler((request, response, exception) ->
+                                response.sendRedirect(
+                                        "http://localhost:8081/login"
+                                                + "?error=keycloak_login_failed"
+                                )
+                        )
+                )                .oauth2ResourceServer(oauth2 ->
                         oauth2.jwt(jwt ->
                                 jwt.jwtAuthenticationConverter(
                                         jwtAuthenticationConverter
