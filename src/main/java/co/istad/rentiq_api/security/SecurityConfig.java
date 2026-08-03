@@ -12,6 +12,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 
 import java.util.Collection;
@@ -26,7 +27,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            JwtAuthenticationConverter jwtAuthenticationConverter
+            JwtAuthenticationConverter jwtAuthenticationConverter,
+            BannedAccountFilter bannedAccountFilter
     ) throws Exception {
 
         http
@@ -480,6 +482,55 @@ public class SecurityConfig {
                         )
                         .hasRole("ADMIN")
 
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/wallets/topup-requests/webhook"
+                        )
+                        .permitAll()
+
+                        .requestMatchers(
+                                "/api/v1/wallets/me",
+                                "/api/v1/wallets/me/**"
+                        )
+                        .hasRole("VENDOR")
+
+                        .requestMatchers(
+                                "/api/v1/admin/wallets",
+                                "/api/v1/admin/wallets/**"
+                        )
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(
+                                "/api/v1/admin/topup-requests",
+                                "/api/v1/admin/topup-requests/**"
+                        )
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(
+                                "/api/v1/admin/categories",
+                                "/api/v1/admin/categories/**"
+                        )
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(
+                                "/api/v1/admin/commissions",
+                                "/api/v1/admin/commissions/**"
+                        )
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(
+                                "/api/v1/vendors/me",
+                                "/api/v1/vendors/me/**"
+                        )
+                        .hasRole("VENDOR")
+
+                        .requestMatchers(
+                                "/api/v1/admin/vendors",
+                                "/api/v1/admin/vendors/**"
+                        )
+                        .hasRole("ADMIN")
+
                         .anyRequest()
                         .authenticated()
                 )
@@ -490,7 +541,9 @@ public class SecurityConfig {
                                         jwtAuthenticationConverter
                                 )
                         )
-                );
+                )
+
+                .addFilterAfter(bannedAccountFilter, BearerTokenAuthenticationFilter.class);
 
         return http.build();
     }
