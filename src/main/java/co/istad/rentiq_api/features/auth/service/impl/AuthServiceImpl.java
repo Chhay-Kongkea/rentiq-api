@@ -371,6 +371,7 @@ package co.istad.rentiq_api.features.auth.service.impl;
 
 
 import co.istad.rentiq_api.common.config.props.KeycloakAdminClientProps;
+import co.istad.rentiq_api.common.exception.DuplicateException;
 import co.istad.rentiq_api.features.auth.RoleEnum;
 import co.istad.rentiq_api.features.auth.dto.request.*;
 import co.istad.rentiq_api.features.auth.dto.response.KeycloakTokenResponse;
@@ -448,7 +449,7 @@ public class AuthServiceImpl implements AuthService {
                 log.error("Create user failed. status={}, body={}", response.getStatus(), body);
 
                 if (response.getStatus() == HttpStatus.CONFLICT.value()) {
-                    throw new UserAlreadyExistsException(request.username());
+                    throw new DuplicateException(request.username(), body);
                 }
                 throw new KeycloakOperationException("Failed to create user: " + body);
             }
