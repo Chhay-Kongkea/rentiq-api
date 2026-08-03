@@ -39,17 +39,6 @@ public class KycController {
         return kycService.resubmitKyc(AuthUtils.extractUserId(), request, frontImage, backImage);
     }
 
-//    @PostMapping("/me/verify-phone")
-//    public MessageResponse startPhoneVerification(@Valid @RequestBody StartPhoneVerificationRequest request) {
-//        kycService.startPhoneVerification(AuthUtils.extractUserId(), request);
-//        return MessageResponse.builder().message("Verification code sent").build();
-//    }
-//
-//    @PostMapping("/me/verify-phone/confirm")
-//    public KycResponse confirmPhoneOtp(@Valid @RequestBody ConfirmOtpRequest request) {
-//        return kycService.confirmPhoneOtp(AuthUtils.extractUserId(), request);
-//    }
-
     @PostMapping("/me/verify-email")
     public MessageResponse startEmailVerification() {
         kycService.startEmailVerification(AuthUtils.extractUserId());

@@ -18,7 +18,7 @@ public class User {
 
     @Id
     @Column(name = "id", length = 255)
-    private String id; // Keycloak subject (sub) id
+    private String id;
 
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
