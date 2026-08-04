@@ -45,12 +45,16 @@ spring:
 
         provider:
           keycloak:
-            issuer-uri: "${ISSUER_URI}"
+            authorization-uri: "${SERVER_URL}/realms/${TARGET_REALM:rentiq-app}/protocol/openid-connect/auth"
+            token-uri: "${SERVER_URL}/realms/${TARGET_REALM:rentiq-app}/protocol/openid-connect/token"
+            user-info-uri: "${SERVER_URL}/realms/${TARGET_REALM:rentiq-app}/protocol/openid-connect/userinfo"
+            jwk-set-uri: "${SERVER_URL}/realms/${TARGET_REALM:rentiq-app}/protocol/openid-connect/certs"
             user-name-attribute: preferred_username
 
       resourceserver:
         jwt:
           issuer-uri: "${ISSUER_URI}"
+          jwk-set-uri: "${SERVER_URL}/realms/${TARGET_REALM:rentiq-app}/protocol/openid-connect/certs"
 
   servlet:
     multipart:
