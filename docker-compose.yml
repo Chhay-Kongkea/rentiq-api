@@ -229,7 +229,7 @@ services:
       # These match your existing Spring Boot variables
       # ------------------------------------------------------
       ISSUER_URI: ${ISSUER_URI}
-
+      jwk-set-uri: "${SERVER_URL}/realms/${TARGET_REALM:rentiq-app}/protocol/openid-connect/certs"
       SERVER_URL: ${SERVER_URL}
 
       CLIENT_ID: ${CLIENT_ID}

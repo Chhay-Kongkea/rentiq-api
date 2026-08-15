@@ -79,6 +79,8 @@ keycloak:
   realm: "${REALM:master}"
   target-realm: "${TARGET_REALM:rentiq-app}"
 
+
+
 app:
   frontend-url: "${FRONTEND_URL:http://localhost:8081}"
 

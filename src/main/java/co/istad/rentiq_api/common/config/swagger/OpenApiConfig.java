@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
-    private static final String SECURITY_SCHEME = "bearerAuth";
+    private static final String BEARER_AUTH = "bearerAuth";
 
     @Bean
     public OpenAPI rentiqOpenAPI() {
@@ -19,23 +19,22 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("RentiQ API")
                         .version("v1")
-                        .description("RentiQ REST API Documentation"))
-
-                .addSecurityItem(
-                        new SecurityRequirement()
-                                .addList(SECURITY_SCHEME)
-                )
+                        .description("RentiQ API Documentation"))
 
                 .components(
                         new Components()
                                 .addSecuritySchemes(
-                                        SECURITY_SCHEME,
+                                        BEARER_AUTH,
                                         new SecurityScheme()
-                                                .name(SECURITY_SCHEME)
                                                 .type(SecurityScheme.Type.HTTP)
                                                 .scheme("bearer")
                                                 .bearerFormat("JWT")
                                 )
+                )
+
+                .addSecurityItem(
+                        new SecurityRequirement()
+                                .addList(BEARER_AUTH)
                 );
     }
 }
