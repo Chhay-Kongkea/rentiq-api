@@ -12,6 +12,8 @@ import co.istad.rentiq_api.features.auth.exception.AuthException;
 import co.istad.rentiq_api.features.category.exception.CategoryNotFoundException;
 import co.istad.rentiq_api.features.category.exception.DuplicateCategoryException;
 import co.istad.rentiq_api.features.item.exception.*;
+import co.istad.rentiq_api.features.imageUpload.exception.ImageStorageException;
+import co.istad.rentiq_api.features.imageUpload.exception.InvalidImageException;
 import co.istad.rentiq_api.features.userProfile.exception.UserProfileException;
 import co.istad.rentiq_api.features.kyc.exception.KycException;
 import co.istad.rentiq_api.features.wallet.exception.WalletException;
@@ -367,9 +369,9 @@ public class GlobalExceptionHandler {
     }
 
 
-    @ExceptionHandler(co.istad.rentiq_api.exception.ItemNotFoundException.class)
+    @ExceptionHandler(ItemNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ApiErrorResponse handleItemNotFound(co.istad.rentiq_api.exception.ItemNotFoundException exception, HttpServletRequest request) {
+    public ApiErrorResponse handleItemNotFound(ItemNotFoundException exception, HttpServletRequest request) {
         return ApiErrorResponse.of(
                 HttpStatus.NOT_FOUND.value(),
                 HttpStatus.NOT_FOUND.getReasonPhrase(),

@@ -1,6 +1,6 @@
 package co.istad.rentiq_api.features.item.service.impl;
 
-import co.istad.rentiq_api.exception.ItemNotFoundException;
+
 import co.istad.rentiq_api.features.bookings.entity.Booking;
 import co.istad.rentiq_api.features.bookings.enums.BookingStatus;
 import co.istad.rentiq_api.features.bookings.repository.BookingRepository;
@@ -11,6 +11,7 @@ import co.istad.rentiq_api.features.item.entity.ItemAvailabilityBlock;
 import co.istad.rentiq_api.features.item.exception.AvailabilityBlockNotFoundException;
 import co.istad.rentiq_api.features.item.exception.InvalidItemOperationException;
 import co.istad.rentiq_api.features.item.exception.ItemAccessDeniedException;
+import co.istad.rentiq_api.features.item.exception.ItemNotFoundException;
 import co.istad.rentiq_api.features.item.repository.ItemAvailabilityBlockRepository;
 import co.istad.rentiq_api.features.item.repository.ItemRepository;
 import co.istad.rentiq_api.features.item.service.ItemAvailabilityService;

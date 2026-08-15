@@ -5,14 +5,7 @@ import co.istad.rentiq_api.features.item.dto.request.UpdateItemRequest;
 import co.istad.rentiq_api.features.item.dto.respone.ItemResponse;
 import co.istad.rentiq_api.features.item.entity.Item;
 import co.istad.rentiq_api.features.item.entity.ItemImage;
-import org.mapstruct.BeanMapping;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.MappingConstants;
-import org.mapstruct.MappingTarget;
-import org.mapstruct.Named;
-import org.mapstruct.NullValuePropertyMappingStrategy;
-import org.mapstruct.ReportingPolicy;
+import org.mapstruct.*;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

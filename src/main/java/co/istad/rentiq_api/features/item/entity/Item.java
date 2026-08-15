@@ -5,9 +5,6 @@ import co.istad.rentiq_api.features.item.enums.ItemCondition;
 import co.istad.rentiq_api.features.item.enums.ItemStatus;
 import jakarta.persistence.*;
 import lombok.*;
-
-import jakarta.persistence.*;
-import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 

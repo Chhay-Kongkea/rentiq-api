@@ -6,12 +6,6 @@ import lombok.*;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-import jakarta.persistence.*;
-import lombok.*;
-
-import java.time.OffsetDateTime;
-import java.util.UUID;
-
 @Entity
 @Table(name = "item_specifications",
         uniqueConstraints = {

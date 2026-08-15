@@ -1,4 +1,4 @@
-package co.istad.rentiq_api.features.item.exception;
+package co.istad.rentiq_api.features.imageUpload.exception;
 
 public class ImageStorageException extends RuntimeException {
 
@@ -6,10 +6,7 @@ public class ImageStorageException extends RuntimeException {
         super(message);
     }
 
-    public ImageStorageException(
-            String message,
-            Throwable cause
-    ) {
+    public ImageStorageException(String message, Throwable cause) {
         super(message, cause);
     }
 }

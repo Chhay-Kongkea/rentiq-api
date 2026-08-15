@@ -1,9 +1,9 @@
-package co.istad.rentiq_api.features.item.service.impl;
+package co.istad.rentiq_api.features.imageUpload.service.impl;
 
-import co.istad.rentiq_api.features.item.dto.storage.StoredImage;
-import co.istad.rentiq_api.features.item.exception.ImageStorageException;
-import co.istad.rentiq_api.features.item.exception.InvalidImageException;
-import co.istad.rentiq_api.features.item.service.ImageStorageService;
+import co.istad.rentiq_api.features.imageUpload.dto.StoredImage;
+import co.istad.rentiq_api.features.imageUpload.exception.ImageStorageException;
+import co.istad.rentiq_api.features.imageUpload.exception.InvalidImageException;
+import co.istad.rentiq_api.features.imageUpload.service.ImageStorageService;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.Transformation;
 import com.cloudinary.utils.ObjectUtils;
@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -33,11 +32,12 @@ public class CloudinaryImageStorageService implements ImageStorageService {
     private final Cloudinary cloudinary;
 
     @Override
-    public StoredImage uploadItemImage(
+    public StoredImage uploadImage(
             MultipartFile file,
-            UUID itemId
+            String folder
     ) {
         validateImage(file);
+        validateFolder(folder);
 
         try {
             Map<?, ?> uploadResult =
@@ -45,7 +45,7 @@ public class CloudinaryImageStorageService implements ImageStorageService {
                             file.getBytes(),
                             ObjectUtils.asMap(
                                     "folder",
-                                    "rentiq/items/" + itemId,
+                                    folder,
                                     "resource_type",
                                     "image",
                                     "unique_filename",
@@ -128,6 +128,12 @@ public class CloudinaryImageStorageService implements ImageStorageService {
             throw new InvalidImageException(
                     "Only JPEG, PNG and WebP images are allowed"
             );
+        }
+    }
+
+    private void validateFolder(String folder) {
+        if (folder == null || folder.isBlank()) {
+            throw new ImageStorageException("Cloudinary folder is required");
         }
     }
 

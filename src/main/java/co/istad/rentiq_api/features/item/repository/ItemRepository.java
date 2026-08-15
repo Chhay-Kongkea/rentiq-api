@@ -31,6 +31,8 @@ public interface ItemRepository
     @EntityGraph(attributePaths = "images")
     Optional<Item> findByIdAndDeletedFalse(UUID id);
 
+    long countByOwnerIdAndDeletedFalse(String ownerId);
+
     @Query("""
             SELECT DISTINCT item.title
             FROM Item item

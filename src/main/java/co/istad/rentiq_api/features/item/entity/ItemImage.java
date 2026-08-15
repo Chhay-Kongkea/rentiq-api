@@ -2,6 +2,7 @@ package co.istad.rentiq_api.features.item.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.OffsetDateTime;
 import java.util.UUID;
 

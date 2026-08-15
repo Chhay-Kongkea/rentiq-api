@@ -1,11 +1,13 @@
 package co.istad.rentiq_api.features.item.dto.request;
 
 import co.istad.rentiq_api.features.item.enums.ItemCondition;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Size;
+
 import java.math.BigDecimal;
 import java.util.Map;
-
-import jakarta.validation.constraints.*;
 
 public record UpdateItemRequest(
 

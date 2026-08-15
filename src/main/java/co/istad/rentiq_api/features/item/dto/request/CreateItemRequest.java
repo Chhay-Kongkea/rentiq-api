@@ -1,10 +1,8 @@
 package co.istad.rentiq_api.features.item.dto.request;
 import co.istad.rentiq_api.features.item.enums.ItemCondition;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Map;
 
 public record CreateItemRequest(

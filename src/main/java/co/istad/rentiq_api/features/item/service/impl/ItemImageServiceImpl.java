@@ -1,19 +1,20 @@
 package co.istad.rentiq_api.features.item.service.impl;
 
 
-import co.istad.rentiq_api.exception.ItemNotFoundException;
+
+import co.istad.rentiq_api.features.imageUpload.dto.StoredImage;
+import co.istad.rentiq_api.features.imageUpload.exception.InvalidImageException;
+import co.istad.rentiq_api.features.imageUpload.service.ImageStorageService;
 import co.istad.rentiq_api.features.item.dto.request.UpdateItemImageRequest;
 import co.istad.rentiq_api.features.item.dto.respone.ItemImageResponse;
-import co.istad.rentiq_api.features.item.dto.storage.StoredImage;
 import co.istad.rentiq_api.features.item.entity.Item;
 import co.istad.rentiq_api.features.item.entity.ItemImage;
-import co.istad.rentiq_api.features.item.exception.InvalidImageException;
 import co.istad.rentiq_api.features.item.exception.ItemAccessDeniedException;
 import co.istad.rentiq_api.features.item.exception.ItemImageNotFoundException;
+import co.istad.rentiq_api.features.item.exception.ItemNotFoundException;
 import co.istad.rentiq_api.features.item.mapper.ItemImageMapper;
 import co.istad.rentiq_api.features.item.repository.ItemImageRepository;
 import co.istad.rentiq_api.features.item.repository.ItemRepository;
-import co.istad.rentiq_api.features.item.service.ImageStorageService;
 import co.istad.rentiq_api.features.item.service.ItemImageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -61,7 +62,7 @@ public class ItemImageServiceImpl implements ItemImageService {
             boolean makeFirstImagePrimary = currentImageCount == 0;
 
             for (MultipartFile file : files) {
-                StoredImage storedImage = imageStorageService.uploadItemImage(file, itemId);
+                StoredImage storedImage = imageStorageService.uploadImage(file, "rentiq/items/" + itemId);
                 uploadedPublicIds.add(storedImage.publicId());
                 ItemImage itemImage = ItemImage.builder()
                                 .item(item)

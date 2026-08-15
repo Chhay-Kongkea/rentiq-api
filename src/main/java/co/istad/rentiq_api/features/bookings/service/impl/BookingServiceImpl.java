@@ -1,6 +1,6 @@
 package co.istad.rentiq_api.features.bookings.service.impl;
 
-import co.istad.rentiq_api.exception.ItemNotFoundException;
+
 import co.istad.rentiq_api.features.bookings.dto.request.CreateBookingRequest;
 import co.istad.rentiq_api.features.bookings.dto.request.QrScanRequest;
 import co.istad.rentiq_api.features.bookings.dto.request.UpdateBookingStatusRequest;
@@ -28,6 +28,7 @@ import co.istad.rentiq_api.features.category.CategoryRepository;
 import co.istad.rentiq_api.features.item.entity.Item;
 import co.istad.rentiq_api.features.item.enums.ItemApprovalStatus;
 import co.istad.rentiq_api.features.item.enums.ItemStatus;
+import co.istad.rentiq_api.features.item.exception.ItemNotFoundException;
 import co.istad.rentiq_api.features.item.repository.ItemRepository;
 import co.istad.rentiq_api.common.exception.NotFoundException;
 import co.istad.rentiq_api.features.itemrequest.entity.Offer;
