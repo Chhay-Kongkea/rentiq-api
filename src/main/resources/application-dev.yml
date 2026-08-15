@@ -1,0 +1,56 @@
+spring:
+
+  # ==========================================================
+  # LOCAL DATABASE
+  # ==========================================================
+  datasource:
+    url: "${DB_URL:jdbc:postgresql://localhost:5434/rentiq_db}"
+    username: "${DB_USER:postgres}"
+    password: "${DB_PASSWORD}"
+    driver-class-name: org.postgresql.Driver
+
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+
+  # ==========================================================
+  # DEVELOPMENT JPA
+  # ==========================================================
+  jpa:
+    show-sql: true
+
+    hibernate:
+      ddl-auto: update
+
+
+# ==========================================================
+# LOCAL SERVER
+# ==========================================================
+server:
+  port: "${PORT:8282}"
+
+  servlet:
+    session:
+      cookie:
+        secure: false
+
+
+# ==========================================================
+# LOCAL FRONTEND
+# ==========================================================
+app:
+  frontend-url: "${FRONTEND_URL:http://localhost:3000}"
+
+
+# ==========================================================
+# DEVELOPMENT LOGGING
+# ==========================================================
+logging:
+  level:
+    org.springframework.security: INFO
+    org.springframework.security.oauth2: INFO
+    org.hibernate.SQL: INFO

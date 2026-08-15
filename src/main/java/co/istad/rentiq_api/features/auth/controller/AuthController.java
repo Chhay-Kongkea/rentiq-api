@@ -32,14 +32,15 @@ public class AuthController {
         return authService.register(request);
     }
 
-    /*
-     * Opens the Keycloak login form.
-     */
+
     @GetMapping("/login")
     public void login(HttpServletResponse response) throws IOException {
         response.sendRedirect("/oauth2/authorization/keycloak");
     }
-
+    @PostMapping("user/login")
+    public TokenResponse login(@Valid @RequestBody LoginRequest request) {
+        return authService.login(request);
+    }
     /*
      * Called by the frontend after OAuth login succeeds.
      */
