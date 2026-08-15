@@ -1,7 +1,8 @@
 package co.istad.rentiq_api.features.review.service.impl;
 
-import co.istad.rentiq_api.features.booking.entity.Booking; // adjust package
-import co.istad.rentiq_api.features.booking.repository.BookingRepository; // adjust package
+import co.istad.rentiq_api.features.bookings.entity.Booking;
+import co.istad.rentiq_api.features.bookings.enums.BookingStatus;
+import co.istad.rentiq_api.features.bookings.repository.BookingRepository;
 import co.istad.rentiq_api.features.item.entity.Item; // adjust package
 import co.istad.rentiq_api.features.item.repository.ItemRepository; // adjust package
 import co.istad.rentiq_api.features.review.dto.request.AttachReviewImagesRequest;
@@ -36,7 +37,6 @@ public class ReviewServiceImpl implements ReviewService {
 
     private static final String STATUS_VISIBLE = "VISIBLE";
     private static final String STATUS_HIDDEN = "HIDDEN";
-    private static final String BOOKING_STATUS_COMPLETED = "COMPLETED";
 
     private final ReviewRepository reviewRepository;
     private final ReviewImageRepository reviewImageRepository;
@@ -53,7 +53,7 @@ public class ReviewServiceImpl implements ReviewService {
         if (!booking.getCustomerId().equals(userId)) {
             throw new ReviewAccessDeniedException("Only the customer of this booking can leave a review");
         }
-        if (!BOOKING_STATUS_COMPLETED.equals(booking.getStatus())) {
+        if (booking.getStatus() != BookingStatus.COMPLETED) {
             throw new BookingNotEligibleForReviewException(bookingId);
         }
         if (reviewRepository.existsByBookingId(bookingId)) {
@@ -63,7 +63,7 @@ public class ReviewServiceImpl implements ReviewService {
         Review review = Review.builder()
                 .bookingId(bookingId)
                 .reviewerId(userId)
-                .itemId(booking.getItemId())
+                .itemId(booking.getItem().getId())
                 .rating(request.rating())
                 .reviewText(request.reviewText())
                 .status(STATUS_VISIBLE)
@@ -71,7 +71,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .build();
 
         reviewRepository.save(review);
-        recalculateItemStats(booking.getItemId());
+        recalculateItemStats(booking.getItem().getId());
 
         return reviewMapper.toResponse(review);
     }
@@ -182,7 +182,7 @@ public class ReviewServiceImpl implements ReviewService {
     @Transactional(readOnly = true)
     public Page<ReviewResponse> adminListReviews(String statusFilter, Pageable pageable) {
         if (statusFilter != null && !statusFilter.isBlank()) {
-            return reviewRepository.findByStatus(statusFilter.toUpperCase(), pageable).map(reviewMapper::toResponse);
+            return reviewRepository.findByAccountStatus(statusFilter.toUpperCase(), pageable).map(reviewMapper::toResponse);
         }
         return reviewRepository.findAll(pageable).map(reviewMapper::toResponse);
     }

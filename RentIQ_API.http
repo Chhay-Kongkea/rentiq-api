@@ -1,0 +1,1451 @@
+# RentIQ API
+
+###
+# group: Auth
+# @name Register
+POST {{baseUrl}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+    "username": "johndoe",
+    "password": "Password123!",
+    "confirmPassword": "Password123!",
+    "email": "johndoe@example.com",
+    "firstName": "John",
+    "lastName": "Doe"
+}
+
+###
+# group: Auth
+# @name Login
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+    "username": "johndoe",
+    "password": "Password123!"
+}
+
+###
+# group: Auth
+# @name Logout
+POST {{baseUrl}}/api/v1/auth/logout
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "refreshToken": "{{refreshToken}}"
+}
+
+###
+# group: Auth
+# @name Refresh Token
+POST {{baseUrl}}/api/v1/auth/refresh-token
+Content-Type: application/json
+
+{
+    "refreshToken": "{{refreshToken}}"
+}
+
+###
+# group: Auth
+# @name Forgot Password
+POST {{baseUrl}}/api/v1/auth/forgot-password
+Content-Type: application/json
+
+{
+    "email": "johndoe@example.com"
+}
+
+###
+# group: Auth
+# @name Verify Email Status
+GET {{baseUrl}}/api/v1/auth/verify-email?
+    email=johndoe@example.com
+
+###
+# group: Auth
+# @name Resend Verification Email
+POST {{baseUrl}}/api/v1/auth/resend-verification-email
+Content-Type: application/json
+
+{
+    "email": "johndoe@example.com"
+}
+
+###
+# group: Auth
+# @name Change Password
+POST {{baseUrl}}/api/v1/auth/change-password
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "currentPassword": "Password123!",
+    "newPassword": "NewPassword123!",
+    "confirmPassword": "NewPassword123!"
+}
+
+###
+# group: User Profile
+# @name Get My Profile
+GET {{baseUrl}}/api/v1/users/me
+Authorization: Bearer {{accessToken}}
+
+###
+# group: User Profile
+# @name Update My Profile
+PATCH {{baseUrl}}/api/v1/users/me
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "locale": "en-US"
+}
+
+###
+# group: User Profile
+# @name Get Public Profile
+# Path variable :id = target user's ID
+GET {{baseUrl}}/api/v1/users/{{id}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: User Profile
+# @name Upload Avatar
+POST {{baseUrl}}/api/v1/users/me/avatar
+Authorization: Bearer {{accessToken}}
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename=""
+
+< 
+--WebAppBoundary
+
+###
+# group: User Profile
+# @name Delete Avatar
+DELETE {{baseUrl}}/api/v1/users/me/avatar
+Authorization: Bearer {{accessToken}}
+
+###
+# group: User Profile
+# @name List Addresses
+GET {{baseUrl}}/api/v1/users/me/addresses
+Authorization: Bearer {{accessToken}}
+
+###
+# group: User Profile
+# @name Add Address
+POST {{baseUrl}}/api/v1/users/me/addresses
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "addressLine": "123 Main St",
+    "city": "Phnom Penh",
+    "country": "KHM",
+    "latitude": 11.5564,
+    "longitude": 104.9282,
+    "isDefault": true
+}
+
+###
+# group: User Profile
+# @name Get Address
+GET {{baseUrl}}/api/v1/users/me/addresses/{{addressId}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: User Profile
+# @name Update Address
+PATCH {{baseUrl}}/api/v1/users/me/addresses/{{addressId_1}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "addressLine": "456 New St",
+    "city": "Phnom Penh",
+    "country": "KHM",
+    "latitude": 11.5564,
+    "longitude": 104.9282,
+    "isDefault": false
+}
+
+###
+# group: User Profile
+# @name Delete Address
+DELETE {{baseUrl}}/api/v1/users/me/addresses/{{addressId_2}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: User Profile
+# @name Set Default Address
+PATCH {{baseUrl}}/api/v1/users/me/addresses/{{addressId_3}}/default
+Authorization: Bearer {{accessToken}}
+
+###
+# group: User Profile
+# @name Get Notification Preferences
+GET {{baseUrl}}/api/v1/users/me/notification-preferences
+Authorization: Bearer {{accessToken}}
+
+###
+# group: User Profile
+# @name Update Notification Preferences
+PATCH {{baseUrl}}/api/v1/users/me/notification-preferences
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "bookingNotifications": true,
+    "paymentNotifications": true,
+    "marketingNotifications": false,
+    "emailNotifications": true,
+    "pushNotifications": true
+}
+
+###
+# group: KYC
+# @name Submit KYC
+POST {{baseUrl}}/api/v1/kyc
+Authorization: Bearer {{accessToken}}
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="data"
+
+{"nationalIdNumber": "123456789", "nationalIdType": "NATIONAL_ID", "nationalIdCountry": "KHM"}
+--WebAppBoundary
+Content-Disposition: form-data; name="frontImage"; filename=""
+
+< 
+--WebAppBoundary
+Content-Disposition: form-data; name="backImage"; filename=""
+
+< 
+--WebAppBoundary
+
+###
+# group: KYC
+# @name Get My KYC
+GET {{baseUrl}}/api/v1/kyc/me
+Authorization: Bearer {{accessToken}}
+
+###
+# group: KYC
+# @name Resubmit KYC
+PATCH {{baseUrl}}/api/v1/kyc/me
+Authorization: Bearer {{accessToken}}
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="data"
+
+{"nationalIdNumber": "123456789", "nationalIdType": "NATIONAL_ID", "nationalIdCountry": "KHM"}
+--WebAppBoundary
+Content-Disposition: form-data; name="frontImage"; filename=""
+
+< 
+--WebAppBoundary
+Content-Disposition: form-data; name="backImage"; filename=""
+
+< 
+--WebAppBoundary
+
+###
+# group: KYC
+# @name Start Email Verification
+POST {{baseUrl}}/api/v1/kyc/me/verify-email
+Authorization: Bearer {{accessToken}}
+
+###
+# group: KYC
+# @name Confirm Email Verification
+POST {{baseUrl}}/api/v1/kyc/me/verify-email/confirm
+Authorization: Bearer {{accessToken}}
+
+###
+# group: KYC (Admin)
+# @name List KYC Submissions
+GET {{baseUrl}}/api/v1/admin/kyc?
+    status=PENDING&
+    page=0&
+    size=20
+Authorization: Bearer {{accessToken}}
+
+###
+# group: KYC (Admin)
+# @name Get KYC Detail
+GET {{baseUrl}}/api/v1/admin/kyc/{{kycId}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: KYC (Admin)
+# @name Approve KYC
+PATCH {{baseUrl}}/api/v1/admin/kyc/{{kycId_1}}/approve
+Authorization: Bearer {{accessToken}}
+
+###
+# group: KYC (Admin)
+# @name Reject KYC
+PATCH {{baseUrl}}/api/v1/admin/kyc/{{kycId_2}}/reject
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "reason": "Document image is unreadable"
+}
+
+###
+# group: Categories
+# @name List Categories
+GET {{baseUrl}}/api/v1/categories
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Categories
+# @name Get Category
+GET {{baseUrl}}/api/v1/categories/{{id_1}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Categories
+# @name Get Category Children
+GET {{baseUrl}}/api/v1/categories/{{id_2}}/children
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Categories
+# @name Get Items In Category
+GET {{baseUrl}}/api/v1/categories/{{id_3}}/items
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Categories
+# @name Create Category (Admin)
+POST {{baseUrl}}/api/v1/admin/categories
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "parentId": null,
+    "name": "Electronics",
+    "slug": "electronics",
+    "commissionRate": 0.1,
+    "iconUrl": "https://example.com/icon.png",
+    "active": true
+}
+
+###
+# group: Categories
+# @name Update Category (Admin)
+PATCH {{baseUrl}}/api/v1/admin/categories/{{id_4}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "parentId": null,
+    "name": "Electronics & Gadgets",
+    "slug": "electronics-gadgets",
+    "commissionRate": 0.12,
+    "iconUrl": "https://example.com/icon.png",
+    "active": true
+}
+
+###
+# group: Categories
+# @name Delete Category (Admin)
+DELETE {{baseUrl}}/api/v1/admin/categories/{{id_5}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Categories
+# @name Update Commission Rate (Admin)
+PATCH {{baseUrl}}/api/v1/admin/categories/{{id_6}}/commission-rate
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "commissionRate": 0.15
+}
+
+###
+# group: Categories
+# @name Update Category Status (Admin)
+PATCH {{baseUrl}}/api/v1/admin/categories/{{id_7}}/status
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "active": false
+}
+
+###
+# group: Items
+# @name List Public Items
+GET {{baseUrl}}/api/v1/items?
+    keyword=&
+    minPrice=&
+    maxPrice=&
+    categoryId=&
+    condition=GOOD&
+    available=true&
+    featured=&
+    location=&
+    pageNumber=0&
+    pageSize=12&
+    sortBy=createdAt&
+    sortDirection=desc
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Items
+# @name Get Item By Id
+GET {{baseUrl}}/api/v1/items/{{itemId}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Items
+# @name Create Item
+POST {{baseUrl}}/api/v1/items
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "categoryId": 1,
+    "title": "Canon EOS R5 Camera",
+    "description": "Professional mirrorless camera in excellent condition",
+    "condition": "LIKE_NEW",
+    "specifications": {
+        "brand": "Canon",
+        "model": "EOS R5"
+    },
+    "locationText": "Phnom Penh, Cambodia",
+    "latitude": 11.5564,
+    "longitude": 104.9282,
+    "pricePerDay": 25.0,
+    "depositAmount": 200.0
+}
+
+###
+# group: Items
+# @name Update Item
+PATCH {{baseUrl}}/api/v1/items/{{itemId_1}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "categoryId": 1,
+    "title": "Canon EOS R5 Camera (Updated)",
+    "description": "Professional mirrorless camera, well maintained",
+    "condition": "GOOD",
+    "specifications": {
+        "brand": "Canon",
+        "model": "EOS R5"
+    },
+    "locationText": "Phnom Penh, Cambodia",
+    "latitude": 11.5564,
+    "longitude": 104.9282,
+    "pricePerDay": 22.0,
+    "depositAmount": 200.0
+}
+
+###
+# group: Items
+# @name Delete Item
+DELETE {{baseUrl}}/api/v1/items/{{itemId_2}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Items
+# @name Update Item Availability
+PATCH {{baseUrl}}/api/v1/items/{{itemId_3}}/availability
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "availability": "UNAVAILABLE"
+}
+
+###
+# group: Items
+# @name Update Item Status
+PATCH {{baseUrl}}/api/v1/items/{{itemId_4}}/status
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "status": "HIDDEN"
+}
+
+###
+# group: Items
+# @name Get My Items (Vendor)
+GET {{baseUrl}}/api/v1/vendors/me/items?
+    pageNumber=0&
+    pageSize=12&
+    sortBy=createdAt&
+    sortDirection=desc
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Items
+# @name Get My Item By Id (Vendor)
+GET {{baseUrl}}/api/v1/vendors/me/items/{{itemId_5}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Items
+# @name Get Items By Vendor
+GET {{baseUrl}}/api/v1/vendors/{{ownerId}}/items?
+    pageNumber=0&
+    pageSize=12&
+    sortBy=createdAt&
+    sortDirection=desc
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Items
+# @name Get Featured Items
+GET {{baseUrl}}/api/v1/items/featured?
+    pageNumber=0&
+    pageSize=12
+
+###
+# group: Items
+# @name Get Nearby Items
+GET {{baseUrl}}/api/v1/items/nearby?
+    latitude=11.5564&
+    longitude=104.9282&
+    radiusKm=10&
+    categoryId=&
+    pageNumber=0&
+    pageSize=12
+
+###
+# group: Items
+# @name Get Item Availability (Blocked Ranges)
+GET {{baseUrl}}/api/v1/items/{{itemId_6}}/availability
+
+###
+# group: Items
+# @name Create Availability Block
+POST {{baseUrl}}/api/v1/items/{{itemId_7}}/availability-block
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "startDate": "2026-08-01",
+    "endDate": "2026-08-05",
+    "reason": "Item damaged, under repair"
+}
+
+###
+# group: Items
+# @name Delete Availability Block
+DELETE {{baseUrl}}/api/v1/items/{{itemId_8}}/availability-block/{{blockId}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Item Images
+# @name Upload Item Images
+POST {{baseUrl}}/api/v1/items/{{itemId_9}}/images
+Authorization: Bearer {{accessToken}}
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="files"; filename=""
+
+< 
+--WebAppBoundary
+
+###
+# group: Item Images
+# @name Get Item Images
+GET {{baseUrl}}/api/v1/items/{{itemId_10}}/images
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Item Images
+# @name Update Item Image
+PATCH {{baseUrl}}/api/v1/items/{{itemId_11}}/images/{{imageId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "sortOrder": 1,
+    "primary": true
+}
+
+###
+# group: Item Images
+# @name Delete Item Image
+DELETE {{baseUrl}}/api/v1/items/{{itemId_12}}/images/{{imageId_1}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Items (Admin)
+# @name Approve Item (Admin)
+POST {{baseUrl}}/api/v1/admin/items/{{itemId_13}}/approve
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Items (Admin)
+# @name Reject Item (Admin)
+POST {{baseUrl}}/api/v1/admin/items/{{itemId_14}}/reject
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "reason": "Listing photos do not match the description"
+}
+
+###
+# group: Items (Admin)
+# @name Remove Item (Admin)
+DELETE {{baseUrl}}/api/v1/admin/items/{{itemId_15}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Items (Admin)
+# @name Set Item Featured (Admin)
+PATCH {{baseUrl}}/api/v1/admin/items/{{itemId_16}}/featured
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "featured": true,
+    "featuredUntil": "2026-12-31T23:59:59Z"
+}
+
+###
+# group: Item Requests
+# @name Get Open Item Requests
+GET {{baseUrl}}/api/v1/item-requests?
+    keyword=&
+    categoryId=&
+    budgetMin=&
+    budgetMax=&
+    status=OPEN&
+    pageNumber=0&
+    pageSize=12&
+    sortBy=createdAt&
+    sortDirection=desc
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Item Requests
+# @name Create Item Request
+POST {{baseUrl}}/api/v1/item-requests
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "categoryId": 1,
+    "title": "Need a DSLR camera for weekend trip",
+    "description": "Looking for a good condition camera for a 3-day trip",
+    "budgetMin": 10.0,
+    "budgetMax": 30.0,
+    "neededFrom": "2026-08-01",
+    "neededTo": "2026-08-03",
+    "latitude": 11.5564,
+    "longitude": 104.9282,
+    "radiusKm": 10,
+    "expiresAt": "2026-07-30T00:00:00Z"
+}
+
+###
+# group: Item Requests
+# @name Get Nearby Item Requests (Vendor)
+GET {{baseUrl}}/api/v1/item-requests/nearby?
+    latitude=11.5564&
+    longitude=104.9282&
+    radiusKm=10&
+    categoryId=&
+    pageNumber=0&
+    pageSize=12
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Item Requests
+# @name Get Item Request By Id
+GET {{baseUrl}}/api/v1/item-requests/{{requestId}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Item Requests
+# @name Update Item Request
+PATCH {{baseUrl}}/api/v1/item-requests/{{requestId_1}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "categoryId": 1,
+    "title": "Need a DSLR camera for weekend trip (updated)",
+    "description": "Looking for a good condition camera for a 4-day trip",
+    "budgetMin": 10.0,
+    "budgetMax": 35.0,
+    "neededFrom": "2026-08-01",
+    "neededTo": "2026-08-04",
+    "latitude": 11.5564,
+    "longitude": 104.9282,
+    "radiusKm": 15,
+    "expiresAt": "2026-07-30T00:00:00Z"
+}
+
+###
+# group: Item Requests
+# @name Cancel Item Request
+DELETE {{baseUrl}}/api/v1/item-requests/{{requestId_2}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Item Requests
+# @name Get My Item Requests
+GET {{baseUrl}}/api/v1/users/me/item-requests?
+    pageNumber=0&
+    pageSize=20
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Offers
+# @name Create Offer
+POST {{baseUrl}}/api/v1/item-requests/{{requestId_3}}/offers
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "itemId": "{{itemId}}",
+    "offeredPrice": 20.0,
+    "currency": "USD",
+    "message": "I have a camera that fits your needs"
+}
+
+###
+# group: Offers
+# @name Get Offers For Request
+GET {{baseUrl}}/api/v1/item-requests/{{requestId_4}}/offers
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Offers
+# @name Accept Offer
+PATCH {{baseUrl}}/api/v1/item-requests/{{requestId_5}}/offers/{{offerId}}/accept
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Offers
+# @name Reject Offer
+PATCH {{baseUrl}}/api/v1/item-requests/{{requestId_6}}/offers/{{offerId_1}}/reject
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Offers
+# @name Get Offer By Id
+GET {{baseUrl}}/api/v1/offers/{{offerId_2}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Offers
+# @name Update Offer
+PATCH {{baseUrl}}/api/v1/offers/{{offerId_3}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "itemId": "{{itemId}}",
+    "offeredPrice": 18.0,
+    "currency": "USD",
+    "message": "Updated offer price"
+}
+
+###
+# group: Offers
+# @name Withdraw Offer
+DELETE {{baseUrl}}/api/v1/offers/{{offerId_4}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Offers
+# @name Get My Offers (Vendor)
+GET {{baseUrl}}/api/v1/vendors/me/offers?
+    pageNumber=0&
+    pageSize=20
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Offers
+# @name Get My Offer Status (Vendor)
+GET {{baseUrl}}/api/v1/vendors/me/offers/{{offerId_5}}/status
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Bookings
+# @name Create Booking
+POST {{baseUrl}}/api/v1/bookings
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "itemId": "{{itemId}}",
+    "offerId": null,
+    "rentalStart": "2026-08-01",
+    "rentalEnd": "2026-08-03"
+}
+
+###
+# group: Bookings
+# @name Get My Bookings
+GET {{baseUrl}}/api/v1/bookings
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Bookings
+# @name Get Booking By Id
+GET {{baseUrl}}/api/v1/bookings/{{id_8}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Bookings
+# @name Get Booking Status History
+GET {{baseUrl}}/api/v1/bookings/{{id_9}}/status-history
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Bookings
+# @name Update Booking Status
+PATCH {{baseUrl}}/api/v1/bookings/{{id_10}}/status
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "status": "APPROVED",
+    "reason": "Approved by vendor"
+}
+
+###
+# group: Bookings
+# @name Get Booking QR Code
+GET {{baseUrl}}/api/v1/bookings/{{id_11}}/qr-code
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Bookings
+# @name Scan Booking QR Code (Vendor)
+POST {{baseUrl}}/api/v1/bookings/qr-code/scan
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "qrToken": "{{qrToken}}"
+}
+
+###
+# group: Bookings
+# @name Get Booking Receipt (PDF)
+GET {{baseUrl}}/api/v1/bookings/{{id_12}}/receipt
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Bookings
+# @name Get Booking Invoice (PDF)
+GET {{baseUrl}}/api/v1/bookings/{{id_13}}/invoice
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Bookings
+# @name Get Vendor Bookings
+GET {{baseUrl}}/api/v1/vendors/me/bookings
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Bookings
+# @name Get Vendor Schedule
+GET {{baseUrl}}/api/v1/vendors/me/bookings/schedule?
+    from=2026-07-01&
+    to=2026-07-31
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Bookings
+# @name Get All Bookings (Admin)
+GET {{baseUrl}}/api/v1/admin/bookings?
+    pageNumber=0&
+    pageSize=20&
+    status=
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Bookings
+# @name Get Booking By Id (Admin)
+GET {{baseUrl}}/api/v1/admin/bookings/{{id_14}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Booking Disputes
+# @name Create Dispute
+POST {{baseUrl}}/api/v1/bookings/{{id_15}}/disputes
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "disputeType": "ITEM_DAMAGE",
+    "description": "The item was returned with visible damage"
+}
+
+###
+# group: Booking Disputes
+# @name List Disputes For Booking
+GET {{baseUrl}}/api/v1/bookings/{{id_16}}/disputes
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Booking Disputes
+# @name Get Dispute By Id
+GET {{baseUrl}}/api/v1/disputes/{{id_17}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Booking Disputes
+# @name Update Dispute
+PATCH {{baseUrl}}/api/v1/disputes/{{id_18}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "disputeType": "ITEM_DAMAGE",
+    "description": "Updated description with more detail"
+}
+
+###
+# group: Booking Disputes (Admin)
+# @name List All Disputes (Admin)
+GET {{baseUrl}}/api/v1/admin/disputes?
+    status=&
+    page=0&
+    size=20
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Booking Disputes (Admin)
+# @name Get Any Dispute (Admin)
+GET {{baseUrl}}/api/v1/admin/disputes/{{id_19}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Booking Disputes (Admin)
+# @name Resolve Dispute (Admin)
+PATCH {{baseUrl}}/api/v1/admin/disputes/{{id_20}}/status
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "status": "RESOLVED",
+    "notes": "Refund issued to renter"
+}
+
+###
+# group: Booking Inspections
+# @name Create Inspection (Vendor)
+POST {{baseUrl}}/api/v1/bookings/{{id_21}}/inspections
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "checkInNotes": "Item inspected before rental, no visible damage",
+    "checkOutNotes": null
+}
+
+###
+# group: Booking Inspections
+# @name Get Inspection
+GET {{baseUrl}}/api/v1/bookings/{{id_22}}/inspections
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Booking Inspections
+# @name Update Inspection (Vendor)
+PATCH {{baseUrl}}/api/v1/bookings/{{id_23}}/inspections
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "checkInNotes": "Item inspected before rental, no visible damage",
+    "checkOutNotes": "Item returned in good condition"
+}
+
+###
+# group: Booking Inspections
+# @name Add Inspection Images (Vendor)
+POST {{baseUrl}}/api/v1/bookings/{{id_24}}/inspections/images
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "images": [
+        {
+            "imageName": "checkin-1.jpg",
+            "type": "CHECK_IN"
+        },
+        {
+            "imageName": "checkout-1.jpg",
+            "type": "CHECK_OUT"
+        }
+    ]
+}
+
+###
+# group: Booking Inspections
+# @name List Inspection Images
+GET {{baseUrl}}/api/v1/bookings/{{id_25}}/inspections/images
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Booking Inspections
+# @name Delete Inspection Image (Vendor)
+DELETE {{baseUrl}}/api/v1/bookings/{{id_26}}/inspections/images/{{imageId_2}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Reviews
+# @name Create Review
+POST {{baseUrl}}/api/v1/bookings/{{id_27}}/review
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "rating": 5,
+    "reviewText": "Great item and smooth transaction!"
+}
+
+###
+# group: Reviews
+# @name Get Item Reviews
+GET {{baseUrl}}/api/v1/items/{{itemId_17}}/reviews?
+    page=0&
+    size=20
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Reviews
+# @name Get Review By Id
+GET {{baseUrl}}/api/v1/reviews/{{id_28}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Reviews
+# @name Update Review
+PATCH {{baseUrl}}/api/v1/reviews/{{id_29}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "rating": 4,
+    "reviewText": "Updated review text"
+}
+
+###
+# group: Reviews
+# @name Delete Review
+DELETE {{baseUrl}}/api/v1/reviews/{{id_30}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Reviews
+# @name Attach Review Images
+POST {{baseUrl}}/api/v1/reviews/{{id_31}}/images
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "images": [
+        {
+            "imageUrl": "https://example.com/review1.jpg",
+            "thumbnailUrl": "https://example.com/review1-thumb.jpg"
+        }
+    ]
+}
+
+###
+# group: Reviews
+# @name Remove Review Image
+DELETE {{baseUrl}}/api/v1/reviews/{{id_32}}/images/{{imageId_3}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Reviews
+# @name Add Vendor Reply
+POST {{baseUrl}}/api/v1/reviews/{{id_33}}/reply
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "reply": "Thank you for renting from us!"
+}
+
+###
+# group: Reviews
+# @name Edit Vendor Reply
+PATCH {{baseUrl}}/api/v1/reviews/{{id_34}}/reply
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "reply": "Thank you so much for renting from us!"
+}
+
+###
+# group: Reviews
+# @name Get My Reviews
+GET {{baseUrl}}/api/v1/users/me/reviews?
+    page=0&
+    size=20
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Reviews (Admin)
+# @name List Reviews (Admin)
+GET {{baseUrl}}/api/v1/admin/reviews?
+    status=&
+    page=0&
+    size=20
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Reviews (Admin)
+# @name Hide Review (Admin)
+PATCH {{baseUrl}}/api/v1/admin/reviews/{{id_35}}/hide
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Reviews (Admin)
+# @name Restore Review (Admin)
+PATCH {{baseUrl}}/api/v1/admin/reviews/{{id_36}}/restore
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Favorites
+# @name Get Favorites
+GET {{baseUrl}}/api/v1/favorites?
+    page=0&
+    size=20
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Favorites
+# @name Add Favorite
+POST {{baseUrl}}/api/v1/favorites/{{itemId_18}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Favorites
+# @name Remove Favorite
+DELETE {{baseUrl}}/api/v1/favorites/{{itemId_19}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Search
+# @name Search Items
+GET {{baseUrl}}/api/v1/search/items?
+    keyword=camera&
+    minPrice=&
+    maxPrice=&
+    categoryId=&
+    condition=&
+    available=&
+    featured=&
+    location=&
+    minimumRating=&
+    pageNumber=0&
+    pageSize=12&
+    sortBy=createdAt&
+    sortDirection=desc
+
+###
+# group: Search
+# @name Get Search Suggestions
+GET {{baseUrl}}/api/v1/search/suggestions?
+    keyword=cam&
+    limit=10
+
+###
+# group: Search
+# @name Search Nearby Items
+GET {{baseUrl}}/api/v1/search/nearby?
+    latitude=11.5564&
+    longitude=104.9282&
+    radiusKm=10&
+    categoryId=&
+    pageNumber=0&
+    pageSize=12
+
+###
+# group: Search
+# @name Get My Search Logs
+GET {{baseUrl}}/api/v1/search/logs?
+    pageNumber=0&
+    pageSize=20
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Search (Admin)
+# @name Get All Search Logs (Admin)
+GET {{baseUrl}}/api/v1/admin/search-logs?
+    pageNumber=0&
+    pageSize=20
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Reports
+# @name Create Report
+POST {{baseUrl}}/api/v1/reports
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "reportType": "ITEM",
+    "reportedUserId": null,
+    "reportedItemId": "{{itemId}}",
+    "reportedReviewId": null,
+    "description": "This listing appears to be fraudulent"
+}
+
+###
+# group: Reports
+# @name Get My Reports
+GET {{baseUrl}}/api/v1/reports/me?
+    pageNumber=0&
+    pageSize=20
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Reports
+# @name Get My Report By Id
+GET {{baseUrl}}/api/v1/reports/{{reportId}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Reports (Admin)
+# @name Get All Reports (Admin)
+GET {{baseUrl}}/api/v1/admin/reports?
+    status=&
+    reportType=&
+    reporterId=&
+    pageNumber=0&
+    pageSize=20&
+    sortDirection=desc
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Reports (Admin)
+# @name Get Report By Id (Admin)
+GET {{baseUrl}}/api/v1/admin/reports/{{reportId_1}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Reports (Admin)
+# @name Create Report Action (Admin)
+POST {{baseUrl}}/api/v1/admin/reports/{{reportId_2}}/actions
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "actionType": "WARNING",
+    "notes": "Issued a warning to the reported user"
+}
+
+###
+# group: Reports (Admin)
+# @name Get Report Actions (Admin)
+GET {{baseUrl}}/api/v1/admin/reports/{{reportId_3}}/actions
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Reports (Admin)
+# @name Update Report Status (Admin)
+PATCH {{baseUrl}}/api/v1/admin/reports/{{reportId_4}}/status
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "status": "RESOLVED"
+}
+
+###
+# group: Notifications
+# @name Get My Notifications
+GET {{baseUrl}}/api/v1/notifications?
+    pageNumber=0&
+    pageSize=20
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Notifications
+# @name Get Notification By Id
+GET {{baseUrl}}/api/v1/notifications/{{notificationId}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Notifications
+# @name Mark Notification As Read
+PATCH {{baseUrl}}/api/v1/notifications/{{notificationId_1}}/read
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Notifications
+# @name Mark All Notifications As Read
+PATCH {{baseUrl}}/api/v1/notifications/read-all
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Notifications
+# @name Delete Notification
+DELETE {{baseUrl}}/api/v1/notifications/{{notificationId_2}}
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Notifications
+# @name Get Unread Count
+GET {{baseUrl}}/api/v1/notifications/unread-count
+Authorization: Bearer {{accessToken}}
+
+###
+# group: Notifications (Admin)
+# @name Broadcast Notification (Admin)
+POST {{baseUrl}}/api/v1/admin/notifications/broadcast
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "userIds": [
+        "user-id-1",
+        "user-id-2"
+    ],
+    "notificationType": "SYSTEM",
+    "title": "Scheduled Maintenance",
+    "body": "RentIQ will be under maintenance on 2026-08-01 from 2am-4am UTC",
+    "payload": {},
+    "referenceId": null,
+    "referenceType": null
+}
+
+###
+# group: Wallet
+# @name Get My Wallet
+GET {{baseUrl}}/api/v1/wallets/me
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+###
+# group: Wallet
+# @name Get My Wallet Transactions
+GET {{baseUrl}}/api/v1/wallets/me/transactions?
+    page=0&
+    size=20
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+###
+# group: Wallet
+# @name Get My Wallet Transaction by ID
+GET {{baseUrl}}/api/v1/wallets/me/transactions/{{transactionId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+###
+# group: Wallet
+# @name Create Topup Request
+POST {{baseUrl}}/api/v1/wallets/me/topup-requests
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "amount": 50.0,
+    "paymentMethod": "BANK_TRANSFER"
+}
+
+###
+# group: Wallet
+# @name Get My Topup Requests
+GET {{baseUrl}}/api/v1/wallets/me/topup-requests?
+    page=0&
+    size=20
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+###
+# group: Wallet
+# @name Get My Topup Request by ID
+GET {{baseUrl}}/api/v1/wallets/me/topup-requests/{{topupRequestId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+###
+# group: Wallet
+# @name Handle Topup Webhook
+POST {{baseUrl}}/api/v1/wallets/topup-requests/webhook
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+X-Webhook-Signature: {{webhookSignature}}
+
+{
+    "bankReference": "BANK-REF-123456",
+    "amount": 50.0,
+    "status": "SUCCESS"
+}
+
+###
+# group: Wallet (Admin)
+# @name List Wallets (Admin)
+GET {{baseUrl}}/api/v1/admin/wallets?
+    page=0&
+    size=20
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+###
+# group: Wallet (Admin)
+# @name Get Wallet by ID (Admin)
+GET {{baseUrl}}/api/v1/admin/wallets/{{walletId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+###
+# group: Wallet (Admin)
+# @name Get Wallet Transactions (Admin)
+GET {{baseUrl}}/api/v1/admin/wallets/{{walletId}}/transactions?
+    page=0&
+    size=20
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+###
+# group: Wallet (Admin)
+# @name Adjust Wallet (Admin)
+PATCH {{baseUrl}}/api/v1/admin/wallets/{{walletId}}/adjust
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "amount": 25.0,
+    "direction": "IN",
+    "reason": "Manual correction"
+}
+
+###
+# group: Wallet (Admin)
+# @name List Topup Requests (Admin)
+GET {{baseUrl}}/api/v1/admin/topup-requests?
+    page=0&
+    size=20
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+###
+# group: Wallet (Admin)
+# @name Confirm Topup Request (Admin)
+PATCH {{baseUrl}}/api/v1/admin/topup-requests/{{topupRequestId}}/confirm
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json

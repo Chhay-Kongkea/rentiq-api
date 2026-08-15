@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
 @Entity
@@ -25,8 +27,8 @@ public class Category extends BasedEntity {
     @Column(unique = true)
     private String slug;
 
-    @Column(name = "commission_rate")
-    private Double commissionRate = 0.1000;
+    @Column(name = "commission_rate", precision = 5, scale = 4)
+    private BigDecimal commissionRate = new BigDecimal("0.1000");
 
     @Column(name = "icon_url")
     private String iconUrl;

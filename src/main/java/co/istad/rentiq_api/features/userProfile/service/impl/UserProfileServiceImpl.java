@@ -12,6 +12,7 @@ import co.istad.rentiq_api.features.userProfile.dto.request.UpdateProfileRequest
 import co.istad.rentiq_api.features.userProfile.dto.response.*;
 import co.istad.rentiq_api.features.userProfile.entity.User;
 import co.istad.rentiq_api.features.userProfile.entity.UserAddress;
+import co.istad.rentiq_api.features.userProfile.enums.AccountStatus;
 import co.istad.rentiq_api.features.userProfile.exception.UserProfileNotFoundException;
 import co.istad.rentiq_api.features.userProfile.exception.AddressNotFoundException;
 import co.istad.rentiq_api.features.userProfile.mapper.UserProfileMapper;
@@ -65,7 +66,7 @@ public class UserProfileServiceImpl implements UserProfileService {
                 .lastName(AuthUtils.extractLastName())
                 .avatarUrl(profile.getAvatarUrl())
                 .locale(profile.getLocale())
-                .accountStatus(profile.getAccountStatus())
+                .accountStatus(profile.getAccountStatus().toString())
                 .memberSince(profile.getCreatedAt())
                 .build();
     }
@@ -304,7 +305,7 @@ public class UserProfileServiceImpl implements UserProfileService {
                         User.builder()
                                 .id(userId)
                                 .locale("en")
-                                .accountStatus("ACTIVE")
+                                .accountStatus(AccountStatus.ACTIVE)
                                 .build()
                 ));
     }

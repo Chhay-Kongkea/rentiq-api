@@ -1,6 +1,8 @@
 package co.istad.rentiq_api.features.wallet.entity;
 
 
+import co.istad.rentiq_api.features.wallet.enums.TransactionDirection;
+import co.istad.rentiq_api.features.wallet.enums.TransactionType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -25,14 +27,31 @@ public class WalletTransaction {
     @Column(name = "wallet_id", nullable = false)
     private UUID walletId;
 
-    @Column(name = "transaction_type", length = 30)
-    private String transactionType;
+    @Column(name = "booking_id")
+    private UUID bookingId;
+
+    @Column(name = "topup_request_id")
+    private UUID topupRequestId;
+
+    @Column(name = "refund_request_id")
+    private UUID refundRequestId;
+
+    @Column(name = "advertisement_id")
+    private UUID advertisementId;
+
+    @Column(name = "promotion_id")
+    private UUID promotionId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "transaction_type", length = 30, nullable = false)
+    private TransactionType transactionType;
 
     @Column(name = "amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "direction", nullable = false, length = 10)
-    private String direction; // "IN" or "OUT"
+    private TransactionDirection direction;
 
     @Column(name = "balance_after", nullable = false, precision = 15, scale = 2)
     private BigDecimal balanceAfter;

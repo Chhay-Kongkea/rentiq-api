@@ -2,10 +2,36 @@ spring:
   application:
     name: rentiq-api
 
+  security:
+    oauth2:
+
+      # Resource Server JWT
+      resourceserver:
+        jwt:
+          issuer-uri: ${ISSUER_URI}
+
+      # OAuth2 Client for Keycloak login
+      client:
+        registration:
+          keycloak:
+            provider: keycloak
+            client-id: ${CLIENT_ID}
+            client-secret: ${CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - openid
+              - profile
+              - email
+
+        provider:
+          keycloak:
+            issuer-uri: ${ISSUER_URI}
+
   datasource:
-    url: "jdbc:postgresql://${RENDER_DB_HOST}:${RENDER_DB_PORT:5432}/${RENDER_DB_NAME}?sslmode=require"
-    username: "${RENDER_DB_USERNAME}"
-    password: "${RENDER_DB_PASSWORD}"
+    url: "${DB_URL:jdbc:postgresql://localhost:5434/rentiq_db}"
+    username: "${DB_USER:postgres}"
+    password: "${DB_PASSWORD}"
     driver-class-name: org.postgresql.Driver
 
     hikari:
@@ -20,74 +46,48 @@ spring:
       ddl-auto: update
 
     show-sql: true
-    open-in-view: false
 
     properties:
       hibernate:
         format_sql: true
-
-  security:
-    oauth2:
-      client:
-        registration:
-          keycloak:
-            provider: keycloak
-            client-id: "${CLIENT_ID:rentiq-client}"
-            client-secret: "${CLIENT_SECRET}"
-            client-authentication-method: client_secret_basic
-            authorization-grant-type: authorization_code
-            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-
-            scope:
-              - openid
-              - profile
-              - email
-
-        provider:
-          keycloak:
-            authorization-uri: "${SERVER_URL}/realms/${TARGET_REALM:rentiq-app}/protocol/openid-connect/auth"
-            token-uri: "${SERVER_URL}/realms/${TARGET_REALM:rentiq-app}/protocol/openid-connect/token"
-            user-info-uri: "${SERVER_URL}/realms/${TARGET_REALM:rentiq-app}/protocol/openid-connect/userinfo"
-            jwk-set-uri: "${SERVER_URL}/realms/${TARGET_REALM:rentiq-app}/protocol/openid-connect/certs"
-            user-name-attribute: preferred_username
-
-      resourceserver:
-        jwt:
-          issuer-uri: "${ISSUER_URI}"
-          jwk-set-uri: "${SERVER_URL}/realms/${TARGET_REALM:rentiq-app}/protocol/openid-connect/certs"
 
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 50MB
 
+
 server:
   port: "${PORT:8282}"
-  forward-headers-strategy: framework
 
   servlet:
     session:
       cookie:
-        http-only: true
-        secure: "${SESSION_COOKIE_SECURE:false}"
-        same-site: lax
+        secure: false
+
 
 keycloak:
-  server-url: "${SERVER_URL}"
-  client-id: "${CLIENT_ID:rentiq-client}"
-  client-secret: "${CLIENT_SECRET}"
-  realm: "${REALM:master}"
-  target-realm: "${TARGET_REALM:rentiq-app}"
+  server-url: ${SERVER_URL}
+  client-id: ${CLIENT_ID}
+  client-secret: ${CLIENT_SECRET}
+  realm: ${REALM}
+  target-realm: ${TARGET_REALM}
 
+
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
 
 
 app:
-  frontend-url: "${FRONTEND_URL:http://localhost:8081}"
+  frontend-url: "${FRONTEND_URL:http://localhost:3000}"
 
-cloudinary:
-  cloud-name: "${CLOUDINARY_CLOUD_NAME}"
-  api-key: "${CLOUDINARY_API_KEY}"
-  api-secret: "${CLOUDINARY_API_SECRET}"
+
+wallet:
+  gateway:
+    webhook-secret: "${WALLET_WEBHOOK_SECRET:local-wallet-webhook-secret}"
+
 
 logging:
   level:

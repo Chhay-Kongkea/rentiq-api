@@ -18,20 +18,88 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
 
     boolean existsByBookingId(UUID bookingId);
 
-    Page<Review> findByItemIdAndStatus(UUID itemId, String status, Pageable pageable);
+    Page<Review> findByItemIdAndStatus(
+            UUID itemId,
+            String status,
+            Pageable pageable
+    );
 
-    Page<Review> findByReviewerId(String reviewerId, Pageable pageable);
+    Page<Review> findByReviewerId(
+            String reviewerId,
+            Pageable pageable
+    );
 
-    Page<Review> findByStatus(String status, Pageable pageable);
+    @Query("""
+            SELECT r
+            FROM Review r
+            WHERE r.status = :status
+            """)
+    Page<Review> findByAccountStatus(
+            @Param("status") String status,
+            Pageable pageable
+    );
 
-    @Query("SELECT AVG(r.rating) FROM Review r WHERE r.itemId = :itemId AND r.status = 'VISIBLE'")
-    BigDecimal calculateAverageRating(@Param("itemId") UUID itemId);
+    @Query("""
+            SELECT AVG(r.rating)
+            FROM Review r
+            WHERE r.itemId = :itemId
+              AND r.status = 'VISIBLE'
+            """)
+    BigDecimal calculateAverageRating(
+            @Param("itemId") UUID itemId
+    );
 
-    @Query("SELECT COUNT(r) FROM Review r WHERE r.itemId = :itemId AND r.status = 'VISIBLE'")
-    long countVisibleReviews(@Param("itemId") UUID itemId);
+    @Query("""
+            SELECT COUNT(r)
+            FROM Review r
+            WHERE r.itemId = :itemId
+              AND r.status = 'VISIBLE'
+            """)
+    long countVisibleReviews(
+            @Param("itemId") UUID itemId
+    );
 
     @Modifying
-    @Query(value = "UPDATE items SET average_rating = COALESCE(:avg, 0), total_reviews = :count WHERE id = :itemId",
-            nativeQuery = true)
-    void syncItemRatingStats(@Param("itemId") UUID itemId, @Param("avg") BigDecimal avg, @Param("count") long count);
+    @Query(
+            value = """
+                    UPDATE items
+                    SET average_rating = COALESCE(:avg, 0),
+                        total_reviews = :count
+                    WHERE id = :itemId
+                    """,
+            nativeQuery = true
+    )
+    void syncItemRatingStats(
+            @Param("itemId") UUID itemId,
+            @Param("avg") BigDecimal avg,
+            @Param("count") long count
+    );
+
+    @Query(
+            value = """
+                    SELECT COALESCE(AVG(r.rating), 0)
+                    FROM reviews r
+                    JOIN items i ON i.id = r.item_id
+                    WHERE i.owner_id = :ownerId
+                      AND r.status = 'VISIBLE'
+                    """,
+            nativeQuery = true
+    )
+    BigDecimal calculateAverageRatingForOwner(
+            @Param("ownerId") String ownerId
+    );
+
+    @Query(
+            value = """
+                    SELECT COUNT(r.id)
+                    FROM reviews r
+                    JOIN items i ON i.id = r.item_id
+                    WHERE i.owner_id = :ownerId
+                      AND r.status = 'VISIBLE'
+                    """,
+            nativeQuery = true
+    )
+    long countVisibleReviewsForOwner(
+            @Param("ownerId") String ownerId
+    );
 }

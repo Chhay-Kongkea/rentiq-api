@@ -11,11 +11,14 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.client.InMemoryOAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestCustomizers;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 
 import java.util.Collection;
@@ -31,7 +34,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             JwtAuthenticationConverter jwtAuthenticationConverter,
-            ClientRegistrationRepository clientRegistrationRepository
+            ClientRegistrationRepository clientRegistrationRepository,
+            BannedAccountFilter bannedAccountFilter
     ) throws Exception {
 
         DefaultOAuth2AuthorizationRequestResolver authorizationRequestResolver =
@@ -72,6 +76,7 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/api/v1/auth/register",
                                 "/api/v1/auth/user/login",
+                                "/api/v1/auth/login",
                                 "/api/v1/auth/resend-verification-email",
                                 "/api/v1/auth/forgot-password",
                                 "/api/v1/auth/refresh-token"
@@ -509,6 +514,55 @@ public class SecurityConfig {
                         )
                         .hasRole("ADMIN")
 
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/wallets/topup-requests/webhook"
+                        )
+                        .permitAll()
+
+                        .requestMatchers(
+                                "/api/v1/wallets/me",
+                                "/api/v1/wallets/me/**"
+                        )
+                        .hasRole("VENDOR")
+
+                        .requestMatchers(
+                                "/api/v1/admin/wallets",
+                                "/api/v1/admin/wallets/**"
+                        )
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(
+                                "/api/v1/admin/topup-requests",
+                                "/api/v1/admin/topup-requests/**"
+                        )
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(
+                                "/api/v1/admin/categories",
+                                "/api/v1/admin/categories/**"
+                        )
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(
+                                "/api/v1/admin/commissions",
+                                "/api/v1/admin/commissions/**"
+                        )
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(
+                                "/api/v1/vendors/me",
+                                "/api/v1/vendors/me/**"
+                        )
+                        .hasRole("VENDOR")
+
+                        .requestMatchers(
+                                "/api/v1/admin/vendors",
+                                "/api/v1/admin/vendors/**"
+                        )
+                        .hasRole("ADMIN")
+
                         .anyRequest()
                         .authenticated()
                 )
@@ -532,12 +586,17 @@ public class SecurityConfig {
                                                 + "?error=keycloak_login_failed"
                                 )
                         )
-                )                .oauth2ResourceServer(oauth2 ->
+                )
+                .oauth2ResourceServer(oauth2 ->
                         oauth2.jwt(jwt ->
                                 jwt.jwtAuthenticationConverter(
                                         jwtAuthenticationConverter
                                 )
                         )
+                )
+                .addFilterAfter(
+                        bannedAccountFilter,
+                        BearerTokenAuthenticationFilter.class
                 );
 
         return http.build();
@@ -588,4 +647,14 @@ public class SecurityConfig {
 
         return converter;
     }
+
+
+        @Bean
+        public OAuth2AuthorizedClientService oAuth2AuthorizedClientService(
+                ClientRegistrationRepository clientRegistrationRepository
+        ) {
+                return new InMemoryOAuth2AuthorizedClientService(
+                        clientRegistrationRepository
+                );
+        }
 }

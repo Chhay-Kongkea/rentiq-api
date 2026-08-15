@@ -7,6 +7,7 @@ import co.istad.rentiq_api.features.category.exception.DuplicateCategoryExceptio
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -67,7 +68,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    public CategoryResponse updateCommissionRate(Integer id, Double commissionRate) {
+    public CategoryResponse updateCommissionRate(Integer id, BigDecimal commissionRate) {
         Category category = findCategoryOrThrow(id);
         category.setCommissionRate(commissionRate);
         return categoryMapper.toResponse(categoryRepository.save(category));

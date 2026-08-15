@@ -21,6 +21,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ItemImageController {
 
+
     private final ItemImageService itemImageService;
 
     @PostMapping(

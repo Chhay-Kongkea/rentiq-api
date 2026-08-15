@@ -1,5 +1,6 @@
 package co.istad.rentiq_api.features.userProfile.entity;
 
+import co.istad.rentiq_api.features.userProfile.enums.AccountStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -27,9 +28,10 @@ public class User {
     @Builder.Default
     private String locale = "en";
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "account_status", length = 20)
     @Builder.Default
-    private String accountStatus = "ACTIVE";
+    private AccountStatus accountStatus = AccountStatus.ACTIVE;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

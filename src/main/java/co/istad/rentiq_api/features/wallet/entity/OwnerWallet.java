@@ -1,5 +1,6 @@
 package co.istad.rentiq_api.features.wallet.entity;
 
+import co.istad.rentiq_api.features.wallet.enums.WalletStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -36,9 +37,10 @@ public class OwnerWallet {
     @Builder.Default
     private String currency = "USD";
 
-    @Column(name = "status", length = 20)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 20, nullable = false)
     @Builder.Default
-    private String status = "ACTIVE";
+    private WalletStatus status = WalletStatus.ACTIVE;
 
     @UpdateTimestamp
     @Column(name = "updated_at")
