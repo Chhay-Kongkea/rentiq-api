@@ -5,29 +5,17 @@ import co.istad.rentiq_api.features.imageUpload.exception.ImageStorageException;
 import co.istad.rentiq_api.features.imageUpload.exception.InvalidImageException;
 import co.istad.rentiq_api.features.imageUpload.service.ImageStorageService;
 import com.cloudinary.Cloudinary;
-import com.cloudinary.Transformation;
 import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class CloudinaryImageStorageService implements ImageStorageService {
-
-    private static final long MAX_IMAGE_SIZE = 10L * 1024L * 1024L;
-
-    private static final Set<String> ALLOWED_CONTENT_TYPES =
-            Set.of(
-                    "image/jpeg",
-                    "image/png",
-                    "image/webp"
-            );
 
     private final Cloudinary cloudinary;
 
@@ -36,141 +24,106 @@ public class CloudinaryImageStorageService implements ImageStorageService {
             MultipartFile file,
             String folder
     ) {
+
         validateImage(file);
-        validateFolder(folder);
 
         try {
-            Map<?, ?> uploadResult =
-                    cloudinary.uploader().upload(
-                            file.getBytes(),
-                            ObjectUtils.asMap(
-                                    "folder",
-                                    folder,
-                                    "resource_type",
-                                    "image",
-                                    "unique_filename",
-                                    true,
-                                    "overwrite",
-                                    false
-                            )
-                    );
 
-            String imageUrl = getRequiredValue(uploadResult, "secure_url");
-            String publicId = getRequiredValue(uploadResult, "public_id");
-            String assetId = getOptionalValue(uploadResult, "asset_id");
+            Map<?, ?> result = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", folder,
+                            "resource_type", "image"
+                    )
+            );
 
-            String thumbnailUrl = buildThumbnailUrl(publicId);
+            String imageUrl =
+                    String.valueOf(result.get("secure_url"));
 
-            return new StoredImage(imageUrl, thumbnailUrl, publicId, assetId);
+            String publicId =
+                    String.valueOf(result.get("public_id"));
 
-        } catch (IOException exception) {
-            throw new ImageStorageException("Failed to read or upload the image", exception);
-        } catch (ImageStorageException exception) {
-            throw exception;
-        } catch (RuntimeException exception) {
-            throw new ImageStorageException("Cloudinary image upload failed", exception);
+            String assetId =
+                    result.get("asset_id") != null
+                            ? String.valueOf(result.get("asset_id"))
+                            : null;
+
+            String thumbnailUrl = cloudinary.url()
+                    .secure(true)
+                    .transformation(
+                            new com.cloudinary.Transformation<>()
+                                    .width(400)
+                                    .height(400)
+                                    .crop("fill")
+                                    .quality("auto")
+                    )
+                    .generate(publicId);
+
+            return new StoredImage(
+                    imageUrl,
+                    thumbnailUrl,
+                    publicId,
+                    assetId
+            );
+
+        } catch (IOException e) {
+
+            throw new ImageStorageException(
+                    "Failed to upload image to Cloudinary",
+                    e
+            );
         }
     }
 
     @Override
     public void deleteImage(String publicId) {
+
         if (publicId == null || publicId.isBlank()) {
-            throw new ImageStorageException(
-                    "Cloudinary public ID is required"
+            throw new InvalidImageException(
+                    "Image publicId is required"
             );
         }
 
         try {
-            Map<?, ?> deletionResult =
-                    cloudinary.uploader().destroy(
-                            publicId,
-                            ObjectUtils.asMap(
-                                    "resource_type",
-                                    "image",
-                                    "invalidate",
-                                    true
-                            )
-                    );
 
-            String result = getOptionalValue(deletionResult, "result");
+            cloudinary.uploader().destroy(
+                    publicId,
+                    ObjectUtils.emptyMap()
+            );
 
-            if (!"ok".equalsIgnoreCase(result) && !"not found".equalsIgnoreCase(result)) {
-                throw new ImageStorageException(
-                        "Cloudinary could not delete image. Result: " + result);
-            }
+        } catch (IOException e) {
 
-        } catch (IOException exception) {
             throw new ImageStorageException(
                     "Failed to delete image from Cloudinary",
-                    exception
+                    e
             );
         }
     }
 
     private void validateImage(MultipartFile file) {
+
         if (file == null || file.isEmpty()) {
             throw new InvalidImageException(
                     "Image file is required"
             );
         }
 
-        if (file.getSize() > MAX_IMAGE_SIZE) {
-            throw new InvalidImageException(
-                    "Image size cannot exceed 10 MB"
-            );
-        }
-
         String contentType = file.getContentType();
 
-        if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(
-                contentType.toLowerCase(Locale.ROOT)
-        )) {
+        if (contentType == null ||
+                !contentType.startsWith("image/")) {
+
             throw new InvalidImageException(
-                    "Only JPEG, PNG and WebP images are allowed"
-            );
-        }
-    }
-
-    private void validateFolder(String folder) {
-        if (folder == null || folder.isBlank()) {
-            throw new ImageStorageException("Cloudinary folder is required");
-        }
-    }
-
-    private String buildThumbnailUrl(String publicId) {
-        return cloudinary
-                .url()
-                .secure(true)
-                .resourceType("image")
-                .transformation(
-                        new Transformation<>()
-                                .width(400)
-                                .height(300)
-                                .crop("fill")
-                                .gravity("auto")
-                                .quality("auto")
-                                .fetchFormat("auto")
-                )
-                .generate(publicId);
-    }
-
-    private String getRequiredValue(Map<?, ?> result, String key) {
-        Object value = result.get(key);
-
-        if (value == null) {
-            throw new ImageStorageException(
-                    "Cloudinary response is missing: " + key
+                    "Only image files are allowed"
             );
         }
 
-        return value.toString();
-    }
+        long maxSize = 10 * 1024 * 1024;
 
-    private String getOptionalValue(Map<?, ?> result, String key) {
-        Object value = result.get(key);
-
-        return value == null
-                ? null
-                : value.toString();
+        if (file.getSize() > maxSize) {
+            throw new InvalidImageException(
+                    "Image size must not exceed 10MB"
+            );
+        }
     }
 }

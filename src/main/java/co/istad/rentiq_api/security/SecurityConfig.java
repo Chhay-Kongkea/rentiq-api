@@ -49,6 +49,11 @@ public class SecurityConfig {
                 );
 
                 http
+
+                        // ============================================================
+                        // BASIC CONFIG
+                        // ============================================================
+
                         .csrf(AbstractHttpConfigurer::disable)
 
                         .cors(Customizer.withDefaults())
@@ -59,7 +64,15 @@ public class SecurityConfig {
                                 )
                         )
 
+                        // ============================================================
+                        // AUTHORIZATION
+                        // ============================================================
+
                         .authorizeHttpRequests(auth -> auth
+
+                                // ====================================================
+                                // SWAGGER / API DOCUMENTATION
+                                // ====================================================
 
                                 .requestMatchers(
                                         "/v3/api-docs",
@@ -71,6 +84,11 @@ public class SecurityConfig {
                                         "/scalar.html"
                                 )
                                 .permitAll()
+
+
+                                // ====================================================
+                                // AUTH - PUBLIC
+                                // ====================================================
 
                                 .requestMatchers(
                                         HttpMethod.POST,
@@ -97,12 +115,10 @@ public class SecurityConfig {
                                 )
                                 .permitAll()
 
-                                .requestMatchers(
-                                        HttpMethod.GET,
-                                        "/api/v1/auth/verify-email"
-                                )
-                                .permitAll()
 
+                                // ====================================================
+                                // AUTH - AUTHENTICATED
+                                // ====================================================
 
                                 .requestMatchers(
                                         HttpMethod.POST,
@@ -112,6 +128,10 @@ public class SecurityConfig {
                                 .authenticated()
 
 
+                                // ====================================================
+                                // CATEGORIES - PUBLIC READ
+                                // ====================================================
+
                                 .requestMatchers(
                                         HttpMethod.GET,
                                         "/api/v1/categories",
@@ -119,12 +139,45 @@ public class SecurityConfig {
                                 )
                                 .permitAll()
 
+
+                                // ====================================================
+                                // GLOBAL IMAGE UPLOAD
+                                // ====================================================
+
                                 .requestMatchers(
                                         HttpMethod.POST,
-                                        "/api/v1/category/**"
+                                        "/api/v1/images/upload"
                                 )
-                                .permitAll()
+                                .hasAnyRole(
+                                        "USER",
+                                        "VENDOR",
+                                        "ADMIN"
+                                )
 
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/v1/images/**"
+                                )
+                                .hasAnyRole(
+                                        "USER",
+                                        "VENDOR",
+                                        "ADMIN"
+                                )
+
+                                .requestMatchers(
+                                        HttpMethod.DELETE,
+                                        "/api/v1/images/**"
+                                )
+                                .hasAnyRole(
+                                        "USER",
+                                        "VENDOR",
+                                        "ADMIN"
+                                )
+
+
+                                // ====================================================
+                                // ITEMS - PUBLIC READ
+                                // ====================================================
 
                                 .requestMatchers(
                                         HttpMethod.GET,
@@ -139,6 +192,11 @@ public class SecurityConfig {
                                         "/api/v1/bookings/*/reviews"
                                 )
                                 .permitAll()
+
+
+                                // ====================================================
+                                // ITEMS - VENDOR
+                                // ====================================================
 
                                 .requestMatchers(
                                         HttpMethod.POST,
@@ -172,6 +230,10 @@ public class SecurityConfig {
                                 .hasRole("VENDOR")
 
 
+                                // ====================================================
+                                // SEARCH - PUBLIC
+                                // ====================================================
+
                                 .requestMatchers(
                                         HttpMethod.GET,
                                         "/api/v1/search/items",
@@ -180,18 +242,21 @@ public class SecurityConfig {
                                 )
                                 .permitAll()
 
+
+                                // ====================================================
+                                // SEARCH LOGS - USER
+                                // ====================================================
+
                                 .requestMatchers(
                                         HttpMethod.GET,
                                         "/api/v1/search/logs"
                                 )
                                 .hasRole("USER")
 
-                                .requestMatchers(
-                                        "/api/v1/admin/search-logs",
-                                        "/api/v1/admin/search-logs/**"
-                                )
-                                .hasRole("ADMIN")
 
+                                // ====================================================
+                                // ITEM REQUESTS
+                                // ====================================================
 
                                 .requestMatchers(
                                         HttpMethod.GET,
@@ -235,6 +300,10 @@ public class SecurityConfig {
                                 )
                                 .hasRole("USER")
 
+
+                                // ====================================================
+                                // OFFERS
+                                // ====================================================
 
                                 .requestMatchers(
                                         HttpMethod.POST,
@@ -281,6 +350,10 @@ public class SecurityConfig {
                                 .hasRole("VENDOR")
 
 
+                                // ====================================================
+                                // REVIEW - VENDOR REPLY
+                                // ====================================================
+
                                 .requestMatchers(
                                         HttpMethod.POST,
                                         "/api/v1/reviews/*/reply"
@@ -293,6 +366,11 @@ public class SecurityConfig {
                                 )
                                 .hasRole("VENDOR")
 
+
+                                // ====================================================
+                                // REVIEW IMAGES
+                                // ====================================================
+
                                 .requestMatchers(
                                         HttpMethod.POST,
                                         "/api/v1/reviews/*/images"
@@ -304,6 +382,11 @@ public class SecurityConfig {
                                         "/api/v1/reviews/*/images/*"
                                 )
                                 .authenticated()
+
+
+                                // ====================================================
+                                // REVIEWS
+                                // ====================================================
 
                                 .requestMatchers(
                                         HttpMethod.GET,
@@ -336,18 +419,36 @@ public class SecurityConfig {
                                 .authenticated()
 
 
+                                // ====================================================
+                                // USER PROFILE
+                                // ====================================================
+
                                 .requestMatchers(
                                         "/api/v1/users/me",
                                         "/api/v1/users/me/**"
                                 )
                                 .authenticated()
 
+                                /*
+                                 * Public user profile.
+                                 *
+                                 * IMPORTANT:
+                                 * Make sure this endpoint does not return:
+                                 * - phone number
+                                 * - KYC information
+                                 * - national ID
+                                 * - private email
+                                 */
                                 .requestMatchers(
                                         HttpMethod.GET,
                                         "/api/v1/users/*"
                                 )
                                 .permitAll()
 
+
+                                // ====================================================
+                                // KYC
+                                // ====================================================
 
                                 .requestMatchers(
                                         HttpMethod.POST,
@@ -375,6 +476,10 @@ public class SecurityConfig {
                                 .authenticated()
 
 
+                                // ====================================================
+                                // BOOKINGS
+                                // ====================================================
+
                                 .requestMatchers(
                                         HttpMethod.POST,
                                         "/api/v1/bookings"
@@ -398,18 +503,21 @@ public class SecurityConfig {
                                 )
                                 .authenticated()
 
+
+                                // ====================================================
+                                // QR CODE
+                                // ====================================================
+
                                 .requestMatchers(
                                         HttpMethod.POST,
                                         "/api/v1/bookings/qr-code/scan"
                                 )
                                 .hasRole("VENDOR")
 
-                                .requestMatchers(
-                                        "/api/v1/admin/bookings",
-                                        "/api/v1/admin/bookings/**"
-                                )
-                                .hasRole("ADMIN")
 
+                                // ====================================================
+                                // DISPUTES
+                                // ====================================================
 
                                 .requestMatchers(
                                         HttpMethod.POST,
@@ -430,12 +538,10 @@ public class SecurityConfig {
                                 )
                                 .authenticated()
 
-                                .requestMatchers(
-                                        "/api/v1/admin/disputes",
-                                        "/api/v1/admin/disputes/**"
-                                )
-                                .hasRole("ADMIN")
 
+                                // ====================================================
+                                // INSPECTIONS
+                                // ====================================================
 
                                 .requestMatchers(
                                         HttpMethod.POST,
@@ -464,56 +570,63 @@ public class SecurityConfig {
                                 .authenticated()
 
 
+                                // ====================================================
+                                // NOTIFICATIONS
+                                // USER + VENDOR
+                                // ====================================================
+
                                 .requestMatchers(
                                         "/api/v1/notifications",
                                         "/api/v1/notifications/**"
                                 )
-                                .hasRole("USER")
+                                .hasAnyRole(
+                                        "USER",
+                                        "VENDOR"
+                                )
 
+
+                                // ====================================================
+                                // REPORTS
+                                // USER + VENDOR
+                                // ====================================================
 
                                 .requestMatchers(
                                         HttpMethod.POST,
                                         "/api/v1/reports"
                                 )
-                                .hasRole("USER")
+                                .hasAnyRole(
+                                        "USER",
+                                        "VENDOR"
+                                )
 
                                 .requestMatchers(
                                         HttpMethod.GET,
                                         "/api/v1/reports/me"
                                 )
-                                .hasRole("USER")
+                                .hasAnyRole(
+                                        "USER",
+                                        "VENDOR"
+                                )
 
                                 .requestMatchers(
                                         HttpMethod.GET,
                                         "/api/v1/reports/*"
                                 )
-                                .hasRole("USER")
-
-
-                                .requestMatchers(
-                                        "/api/v1/admin/items",
-                                        "/api/v1/admin/items/**"
+                                .hasAnyRole(
+                                        "USER",
+                                        "VENDOR"
                                 )
-                                .hasRole("ADMIN")
 
-                                .requestMatchers(
-                                        "/api/v1/admin/kyc",
-                                        "/api/v1/admin/kyc/**"
-                                )
-                                .hasRole("ADMIN")
 
-                                .requestMatchers(
-                                        "/api/v1/admin/notifications",
-                                        "/api/v1/admin/notifications/**"
-                                )
-                                .hasRole("ADMIN")
-
-                                .requestMatchers(
-                                        "/api/v1/admin/reports",
-                                        "/api/v1/admin/reports/**"
-                                )
-                                .hasRole("ADMIN")
-
+                                // ====================================================
+                                // WALLET WEBHOOK
+                                //
+                                // Keep public because external payment provider
+                                // will normally not have a Keycloak access token.
+                                //
+                                // IMPORTANT:
+                                // Validate webhook signature inside controller/service.
+                                // ====================================================
 
                                 .requestMatchers(
                                         HttpMethod.POST,
@@ -521,35 +634,21 @@ public class SecurityConfig {
                                 )
                                 .permitAll()
 
+
+                                // ====================================================
+                                // VENDOR WALLET
+                                // ====================================================
+
                                 .requestMatchers(
                                         "/api/v1/wallets/me",
                                         "/api/v1/wallets/me/**"
                                 )
                                 .hasRole("VENDOR")
 
-                                .requestMatchers(
-                                        "/api/v1/admin/wallets",
-                                        "/api/v1/admin/wallets/**"
-                                )
-                                .hasRole("ADMIN")
 
-                                .requestMatchers(
-                                        "/api/v1/admin/topup-requests",
-                                        "/api/v1/admin/topup-requests/**"
-                                )
-                                .hasRole("ADMIN")
-
-                                .requestMatchers(
-                                        "/api/v1/admin/categories",
-                                        "/api/v1/admin/categories/**"
-                                )
-                                .hasRole("ADMIN")
-
-                                .requestMatchers(
-                                        "/api/v1/admin/commissions",
-                                        "/api/v1/admin/commissions/**"
-                                )
-                                .hasRole("ADMIN")
+                                // ====================================================
+                                // VENDOR PROFILE
+                                // ====================================================
 
                                 .requestMatchers(
                                         "/api/v1/vendors/me",
@@ -557,15 +656,44 @@ public class SecurityConfig {
                                 )
                                 .hasRole("VENDOR")
 
+
+                                // ====================================================
+                                // ALL ADMIN ENDPOINTS
+                                //
+                                // This MUST stay before anyRequest().
+                                //
+                                // Covers:
+                                // /api/v1/admin/users/**
+                                // /api/v1/admin/vendors/**
+                                // /api/v1/admin/items/**
+                                // /api/v1/admin/bookings/**
+                                // /api/v1/admin/kyc/**
+                                // /api/v1/admin/reports/**
+                                // /api/v1/admin/wallets/**
+                                // etc.
+                                // ====================================================
+
                                 .requestMatchers(
-                                        "/api/v1/admin/vendors",
-                                        "/api/v1/admin/vendors/**"
+                                        "/api/v1/admin/**"
                                 )
                                 .hasRole("ADMIN")
+
+
+                                // ====================================================
+                                // FALLBACK
+                                //
+                                // Any endpoint not listed above requires login.
+                                // ====================================================
 
                                 .anyRequest()
                                 .authenticated()
                         )
+
+
+                        // ============================================================
+                        // OAUTH2 LOGIN
+                        // ============================================================
+
                         .oauth2Login(oauth2 -> oauth2
 
                                 .authorizationEndpoint(endpoint ->
@@ -574,19 +702,27 @@ public class SecurityConfig {
                                         )
                                 )
 
-                                .successHandler((request, response, authentication) ->
-                                        response.sendRedirect(
-                                                "http://localhost:8081/auth/callback"
-                                        )
+                                .successHandler(
+                                        (request, response, authentication) ->
+                                                response.sendRedirect(
+                                                        "http://localhost:8081/auth/callback"
+                                                )
                                 )
 
-                                .failureHandler((request, response, exception) ->
-                                        response.sendRedirect(
-                                                "http://localhost:8081/login"
-                                                        + "?error=keycloak_login_failed"
-                                        )
+                                .failureHandler(
+                                        (request, response, exception) ->
+                                                response.sendRedirect(
+                                                        "http://localhost:8081/login"
+                                                                + "?error=keycloak_login_failed"
+                                                )
                                 )
                         )
+
+
+                        // ============================================================
+                        // JWT RESOURCE SERVER
+                        // ============================================================
+
                         .oauth2ResourceServer(oauth2 ->
                                 oauth2.jwt(jwt ->
                                         jwt.jwtAuthenticationConverter(
@@ -594,6 +730,12 @@ public class SecurityConfig {
                                         )
                                 )
                         )
+
+
+                        // ============================================================
+                        // SUSPENDED / BANNED ACCOUNT FILTER
+                        // ============================================================
+
                         .addFilterAfter(
                                 bannedAccountFilter,
                                 BearerTokenAuthenticationFilter.class
@@ -601,6 +743,21 @@ public class SecurityConfig {
 
                 return http.build();
         }
+
+
+        // ================================================================
+        // KEYCLOAK ROLE CONVERTER
+        //
+        // Keycloak:
+        // USER
+        // VENDOR
+        // ADMIN
+        //
+        // Spring:
+        // ROLE_USER
+        // ROLE_VENDOR
+        // ROLE_ADMIN
+        // ================================================================
 
         @Bean
         public JwtAuthenticationConverter
@@ -619,8 +776,7 @@ public class SecurityConfig {
                         Object rolesValue =
                                 realmAccess.get("roles");
 
-                        if (!(rolesValue
-                                instanceof Collection<?> roles)) {
+                        if (!(rolesValue instanceof Collection<?> roles)) {
                                 return Collections.emptyList();
                         }
 
@@ -649,10 +805,15 @@ public class SecurityConfig {
         }
 
 
+        // ================================================================
+        // OAUTH2 AUTHORIZED CLIENT SERVICE
+        // ================================================================
+
         @Bean
         public OAuth2AuthorizedClientService oAuth2AuthorizedClientService(
                 ClientRegistrationRepository clientRegistrationRepository
         ) {
+
                 return new InMemoryOAuth2AuthorizedClientService(
                         clientRegistrationRepository
                 );
