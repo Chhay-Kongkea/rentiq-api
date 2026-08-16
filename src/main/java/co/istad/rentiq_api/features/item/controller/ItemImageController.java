@@ -35,7 +35,6 @@ public class ItemImageController {
 
             @RequestPart("files")
             List<MultipartFile> files,
-
             Authentication authentication
     ) {
         List<ItemImageResponse> response =

@@ -1,5 +1,6 @@
 package co.istad.rentiq_api.features.bookings.service.impl;
 
+
 import co.istad.rentiq_api.features.bookings.entity.Booking;
 import com.lowagie.text.Document;
 import com.lowagie.text.Font;
@@ -12,7 +13,7 @@ import java.io.ByteArrayOutputStream;
 import java.time.format.DateTimeFormatter;
 
 @Component
-class BookingDocumentGenerator {
+public class BookingDocumentGenerator {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd MMM yyyy");
 

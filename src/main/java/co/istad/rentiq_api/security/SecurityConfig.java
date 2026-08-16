@@ -127,11 +127,6 @@ public class SecurityConfig {
                                 )
                                 .authenticated()
 
-
-                                // ====================================================
-                                // CATEGORIES - PUBLIC READ
-                                // ====================================================
-
                                 .requestMatchers(
                                         HttpMethod.GET,
                                         "/api/v1/categories",

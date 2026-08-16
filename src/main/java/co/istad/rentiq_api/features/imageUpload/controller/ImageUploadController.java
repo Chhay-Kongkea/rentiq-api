@@ -4,7 +4,9 @@ import co.istad.rentiq_api.features.imageUpload.dto.response.ImageUploadResponse
 import co.istad.rentiq_api.features.imageUpload.service.ImageUploadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,30 +19,40 @@ public class ImageUploadController {
 
     private final ImageUploadService imageUploadService;
 
-    @PostMapping("/upload")
+
+    @PostMapping(
+            value = "/upload",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ImageUploadResponse> uploadImage(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "folder", required = false) String folder
+            @RequestPart("image") MultipartFile image
     ) {
-        ImageUploadResponse response = imageUploadService.upload(file, folder);
+        ImageUploadResponse response =
+                imageUploadService.upload(image, null);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{imageId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ImageUploadResponse> getImage(
-            @PathVariable UUID id
+            @PathVariable UUID imageId
     ) {
-        return ResponseEntity.ok(imageUploadService.getById(id));
+        return ResponseEntity.ok(
+                imageUploadService.getById(imageId)
+        );
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{imageId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> deleteImage(
-            @PathVariable UUID id
+            @PathVariable UUID imageId
     ) {
-        imageUploadService.delete(id);
+        imageUploadService.delete(imageId);
+
         return ResponseEntity.noContent().build();
     }
 }
