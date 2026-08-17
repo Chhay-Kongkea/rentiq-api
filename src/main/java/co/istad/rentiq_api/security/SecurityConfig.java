@@ -650,7 +650,8 @@ public class SecurityConfig {
                                         "/api/v1/vendors/me/**"
                                 )
                                 .hasRole("VENDOR")
-
+                                .requestMatchers("/api/v1/vendor-applications/**")
+                                .hasRole("USER")
 
                                 // ====================================================
                                 // ALL ADMIN ENDPOINTS
