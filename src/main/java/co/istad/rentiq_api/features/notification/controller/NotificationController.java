@@ -19,7 +19,7 @@ import java.util.UUID;
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
 @Validated
-@PreAuthorize("hasRole('USER')")
+@PreAuthorize("hasAnyRole('USER', 'VENDOR')")
 public class NotificationController {
 
     private final NotificationService notificationService;

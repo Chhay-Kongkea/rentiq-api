@@ -1,6 +1,7 @@
 package co.istad.rentiq_api.features.item.specification;
 
 import co.istad.rentiq_api.features.item.dto.request.ItemFilter;
+import co.istad.rentiq_api.features.item.dto.request.AdminItemFilter;
 import co.istad.rentiq_api.features.item.entity.Item;
 import co.istad.rentiq_api.features.item.enums.ItemApprovalStatus;
 import co.istad.rentiq_api.features.item.enums.ItemStatus;
@@ -149,6 +150,30 @@ public final class ItemSpecification {
             return criteriaBuilder.and(
                     predicates.toArray(new Predicate[0])
             );
+        };
+    }
+
+    public static Specification<Item> adminModerationFilter(AdminItemFilter filter) {
+        return (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(criteriaBuilder.isFalse(root.get("deleted")));
+
+            if (filter != null && filter.approvalStatus() != null) {
+                predicates.add(criteriaBuilder.equal(
+                        root.get("approvalStatus"),
+                        filter.approvalStatus()
+                ));
+            }
+
+            if (filter != null && filter.keyword() != null && !filter.keyword().isBlank()) {
+                String keyword = "%" + filter.keyword().trim().toLowerCase(Locale.ROOT) + "%";
+                predicates.add(criteriaBuilder.or(
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("title")), keyword),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), keyword)
+                ));
+            }
+
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
     }
 

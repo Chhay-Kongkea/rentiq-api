@@ -21,7 +21,7 @@ public class CommissionRateAudit {
     private UUID id;
 
     @Column(name = "category_id", nullable = false)
-    private Integer categoryId;
+    private UUID categoryId;
 
     @Column(name = "old_rate", precision = 5, scale = 4)
     private BigDecimal oldRate;

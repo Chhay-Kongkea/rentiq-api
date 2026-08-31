@@ -1,10 +1,16 @@
 package co.istad.rentiq_api.features.review.service.impl;
 
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditAction;
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditTargetType;
+import co.istad.rentiq_api.features.adminAudit.service.AdminAuditService;
 import co.istad.rentiq_api.features.bookings.entity.Booking;
 import co.istad.rentiq_api.features.bookings.enums.BookingStatus;
 import co.istad.rentiq_api.features.bookings.repository.BookingRepository;
 import co.istad.rentiq_api.features.item.entity.Item; // adjust package
 import co.istad.rentiq_api.features.item.repository.ItemRepository; // adjust package
+import co.istad.rentiq_api.features.notification.enums.NotificationReferenceType;
+import co.istad.rentiq_api.features.notification.enums.NotificationType;
+import co.istad.rentiq_api.features.notification.service.NotificationService;
 import co.istad.rentiq_api.features.review.dto.request.AttachReviewImagesRequest;
 import co.istad.rentiq_api.features.review.dto.request.CreateReviewRequest;
 import co.istad.rentiq_api.features.review.dto.request.ReviewImageInput;
@@ -29,6 +35,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -43,6 +50,8 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewMapper reviewMapper;
     private final BookingRepository bookingRepository;
     private final ItemRepository itemRepository;
+    private final AdminAuditService adminAuditService;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -191,18 +200,52 @@ public class ReviewServiceImpl implements ReviewService {
     @Transactional
     public void adminHideReview(UUID reviewId) {
         Review review = reviewRepository.findById(reviewId).orElseThrow(() -> new ReviewNotFoundException(reviewId));
+        String previousStatus = review.getStatus();
         review.setStatus(STATUS_HIDDEN);
         reviewRepository.save(review);
         recalculateItemStats(review.getItemId());
+
+        adminAuditService.record(
+                AdminAuditAction.REVIEW_HIDDEN,
+                AdminAuditTargetType.REVIEW,
+                reviewId.toString(),
+                Map.of("status", previousStatus),
+                Map.of("status", STATUS_HIDDEN),
+                null);
+
+        notificationService.notifyUser(
+                review.getReviewerId(),
+                NotificationType.REVIEW,
+                "Review hidden",
+                "Your review has been hidden by an administrator.",
+                NotificationReferenceType.REVIEW,
+                review.getId());
     }
 
     @Override
     @Transactional
     public void adminRestoreReview(UUID reviewId) {
         Review review = reviewRepository.findById(reviewId).orElseThrow(() -> new ReviewNotFoundException(reviewId));
+        String previousStatus = review.getStatus();
         review.setStatus(STATUS_VISIBLE);
         reviewRepository.save(review);
         recalculateItemStats(review.getItemId());
+
+        adminAuditService.record(
+                AdminAuditAction.REVIEW_RESTORED,
+                AdminAuditTargetType.REVIEW,
+                reviewId.toString(),
+                Map.of("status", previousStatus),
+                Map.of("status", STATUS_VISIBLE),
+                null);
+
+        notificationService.notifyUser(
+                review.getReviewerId(),
+                NotificationType.REVIEW,
+                "Review restored",
+                "Your review has been restored by an administrator.",
+                NotificationReferenceType.REVIEW,
+                review.getId());
     }
 
     private Review getOwnedReview(String userId, UUID reviewId) {

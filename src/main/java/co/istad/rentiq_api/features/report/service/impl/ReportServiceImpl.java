@@ -3,7 +3,13 @@ package co.istad.rentiq_api.features.report.service.impl;
 import co.istad.rentiq_api.common.exception.InvalidOperationException;
 import co.istad.rentiq_api.common.exception.InvalidStateException;
 import co.istad.rentiq_api.common.exception.NotFoundException;
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditAction;
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditTargetType;
+import co.istad.rentiq_api.features.adminAudit.service.AdminAuditService;
 import co.istad.rentiq_api.features.item.dto.respone.PageResponse;
+import co.istad.rentiq_api.features.notification.enums.NotificationReferenceType;
+import co.istad.rentiq_api.features.notification.enums.NotificationType;
+import co.istad.rentiq_api.features.notification.service.NotificationService;
 import co.istad.rentiq_api.features.report.dto.request.CreateReportActionRequest;
 import co.istad.rentiq_api.features.report.dto.request.CreateReportRequest;
 import co.istad.rentiq_api.features.report.dto.request.UpdateReportStatusRequest;
@@ -26,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -40,6 +47,8 @@ public class ReportServiceImpl implements ReportService {
     private final ReportActionRepository reportActionRepository;
     private final ReportMapper reportMapper;
     private final ReportActionMapper reportActionMapper;
+    private final AdminAuditService adminAuditService;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -131,6 +140,8 @@ public class ReportServiceImpl implements ReportService {
             );
         }
 
+        ReportStatus previousStatus = report.getStatus();
+
         ReportAction action = reportActionMapper.toEntity(
                         request,
                         report,
@@ -140,6 +151,16 @@ public class ReportServiceImpl implements ReportService {
         ReportAction savedAction = reportActionRepository.save(action);
 
         updateStatusAfterAction(report, request.actionType());
+
+        adminAuditService.record(
+                AdminAuditAction.MODERATION_ACTION_CREATED,
+                AdminAuditTargetType.REPORT,
+                reportId.toString(),
+                null,
+                Map.of("actionType", request.actionType().name()),
+                request.notes());
+
+        notifyReporterIfResolved(report, previousStatus);
 
         return reportActionMapper.toResponse(savedAction);
     }
@@ -165,10 +186,39 @@ public class ReportServiceImpl implements ReportService {
                 request.status()
         );
 
+        ReportStatus previousStatus = report.getStatus();
+
         report.setStatus(request.status());
         Report savedReport = reportRepository.save(report);
 
+        adminAuditService.record(
+                AdminAuditAction.REPORT_STATUS_CHANGED,
+                AdminAuditTargetType.REPORT,
+                reportId.toString(),
+                Map.of("status", previousStatus.name()),
+                Map.of("status", request.status().name()),
+                null);
+
+        notifyReporterIfResolved(savedReport, previousStatus);
+
         return reportMapper.toResponse(savedReport);
+    }
+
+    private void notifyReporterIfResolved(Report report, ReportStatus previousStatus) {
+        if (report.getStatus() == previousStatus) {
+            return;
+        }
+        if (report.getStatus() != ReportStatus.RESOLVED && report.getStatus() != ReportStatus.DISMISSED) {
+            return;
+        }
+
+        notificationService.notifyUser(
+                report.getReporterId(),
+                NotificationType.REPORT,
+                report.getStatus() == ReportStatus.RESOLVED ? "Report resolved" : "Report dismissed",
+                "Your report has been reviewed. Status: " + report.getStatus().name() + ".",
+                NotificationReferenceType.REPORT,
+                report.getId());
     }
 
     private Report findReport(UUID reportId) {

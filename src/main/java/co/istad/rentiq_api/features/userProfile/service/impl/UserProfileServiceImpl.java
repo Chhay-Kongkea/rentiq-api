@@ -13,6 +13,7 @@ import co.istad.rentiq_api.features.userProfile.dto.response.*;
 import co.istad.rentiq_api.features.userProfile.entity.User;
 import co.istad.rentiq_api.features.userProfile.entity.UserAddress;
 import co.istad.rentiq_api.features.userProfile.enums.AccountStatus;
+import co.istad.rentiq_api.features.userProfile.exception.UserProfileException;
 import co.istad.rentiq_api.features.userProfile.exception.UserProfileNotFoundException;
 import co.istad.rentiq_api.features.userProfile.exception.AddressNotFoundException;
 import co.istad.rentiq_api.features.userProfile.mapper.UserProfileMapper;
@@ -21,6 +22,7 @@ import co.istad.rentiq_api.features.userProfile.repository.UserRepository;
 import co.istad.rentiq_api.features.userProfile.service.AvatarStorageService;
 import co.istad.rentiq_api.features.userProfile.service.UserProfileService;
 import co.istad.rentiq_api.features.userProfile.util.GeoUtils;
+import co.istad.rentiq_api.features.localization.enums.SupportedLocale;
 import co.istad.rentiq_api.security.AuthUtils;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -78,7 +80,13 @@ public class UserProfileServiceImpl implements UserProfileService {
         User profile = getOrCreateProfile(userId);
 
         if (request.locale() != null && !request.locale().isBlank()) {
-            profile.setLocale(request.locale());
+            // Must resolve through the same SupportedLocale the Localization API actually
+            // serves (en/km) — a persisted locale that GET /api/v1/locales/{code}/strings
+            // can't serve would be a stored dead value (backend audit BUS-003).
+            SupportedLocale locale = SupportedLocale.fromCode(request.locale())
+                    .orElseThrow(() -> new UserProfileException(
+                            HttpStatus.BAD_REQUEST, "Unsupported locale: " + request.locale()));
+            profile.setLocale(locale.getCode());
         }
 
         userRepository.save(profile);

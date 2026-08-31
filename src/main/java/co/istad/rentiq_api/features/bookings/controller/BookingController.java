@@ -11,6 +11,9 @@ import co.istad.rentiq_api.features.bookings.enums.BookingStatus;
 import co.istad.rentiq_api.features.bookings.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -41,8 +44,11 @@ public class BookingController {
     }
 
     @GetMapping("/bookings")
-    public List<BookingResponse> getMyBookings(Authentication authentication) {
-        return bookingService.findMyBookings(authentication.getName());
+    public PageResponse<BookingResponse> getMyBookings(
+            Authentication authentication,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return bookingService.findMyBookings(authentication.getName(), pageable);
     }
 
     @GetMapping("/bookings/{id}")
@@ -97,8 +103,11 @@ public class BookingController {
 
     @GetMapping("/vendors/me/bookings")
     @PreAuthorize("hasRole('VENDOR')")
-    public List<BookingResponse> getVendorBookings(Authentication authentication) {
-        return bookingService.findVendorBookings(authentication.getName());
+    public PageResponse<BookingResponse> getVendorBookings(
+            Authentication authentication,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return bookingService.findVendorBookings(authentication.getName(), pageable);
     }
 
     @GetMapping("/vendors/me/bookings/schedule")

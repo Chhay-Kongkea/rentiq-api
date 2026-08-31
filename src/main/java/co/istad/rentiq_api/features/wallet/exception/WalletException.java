@@ -3,6 +3,7 @@ package co.istad.rentiq_api.features.wallet.exception;
 
 import org.springframework.http.HttpStatus;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 public class WalletException extends RuntimeException {
@@ -30,27 +31,23 @@ public class WalletException extends RuntimeException {
         return new WalletException(HttpStatus.NOT_FOUND, "Wallet transaction not found with ID: " + transactionId);
     }
 
-    public static WalletException topupNotFound(UUID topupRequestId) {
-        return new WalletException(HttpStatus.NOT_FOUND, "Top-up request not found with ID: " + topupRequestId);
-    }
-
-    public static WalletException topupNotFoundByReference(String bankReference) {
-        return new WalletException(HttpStatus.NOT_FOUND, "Top-up request not found for bank reference: " + bankReference);
-    }
-
-    public static WalletException invalidSignature() {
-        return new WalletException(HttpStatus.UNAUTHORIZED, "Webhook signature is missing or invalid");
-    }
-
-    public static WalletException amountMismatch() {
-        return new WalletException(HttpStatus.UNPROCESSABLE_ENTITY, "Webhook amount does not match the recorded top-up amount");
-    }
-
-    public static WalletException invalidTopupState(String currentStatus) {
-        return new WalletException(HttpStatus.CONFLICT, "Top-up request is not pending, current status: " + currentStatus);
-    }
-
     public static WalletException invalidAmount() {
         return new WalletException(HttpStatus.BAD_REQUEST, "Amount must be greater than zero");
+    }
+
+    public static WalletException insufficientBalance(BigDecimal balance, BigDecimal amount) {
+        return new WalletException(HttpStatus.UNPROCESSABLE_ENTITY,
+                "Insufficient wallet balance: balance is %s but debit amount is %s".formatted(balance, amount));
+    }
+
+    public static WalletException notAVendor(String ownerId) {
+        return new WalletException(HttpStatus.UNPROCESSABLE_ENTITY,
+                "Wallet owner " + ownerId + " does not have an approved vendor application");
+    }
+
+    public static WalletException currencyMismatch(String walletCurrency, String requestCurrency) {
+        return new WalletException(HttpStatus.UNPROCESSABLE_ENTITY,
+                "Wallet currency is %s but top-up currency was %s — currency conversion is not supported"
+                        .formatted(walletCurrency, requestCurrency));
     }
 }

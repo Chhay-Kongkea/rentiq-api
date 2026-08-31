@@ -18,7 +18,7 @@ public record NearbyItemRequestFilter(
         @DecimalMax("200.0")
         Double radiusKm,
 
-        Short categoryId,
+        java.util.UUID categoryId,
 
         @Min(0)
         Integer pageNumber,

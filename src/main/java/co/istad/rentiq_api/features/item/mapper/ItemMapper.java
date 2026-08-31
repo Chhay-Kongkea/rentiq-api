@@ -3,6 +3,7 @@ package co.istad.rentiq_api.features.item.mapper;
 import co.istad.rentiq_api.features.item.dto.request.CreateItemRequest;
 import co.istad.rentiq_api.features.item.dto.request.UpdateItemRequest;
 import co.istad.rentiq_api.features.item.dto.respone.ItemResponse;
+import co.istad.rentiq_api.features.item.dto.respone.AdminItemResponse;
 import co.istad.rentiq_api.features.item.entity.Item;
 import co.istad.rentiq_api.features.item.entity.ItemImage;
 import org.mapstruct.*;
@@ -91,6 +92,15 @@ public interface ItemMapper {
             qualifiedByName = "copySpecifications"
     )
     ItemResponse toResponse(Item item);
+
+    default AdminItemResponse toAdminResponse(Item item) {
+        return new AdminItemResponse(
+                toResponse(item),
+                item.getApprovedBy(),
+                item.getApprovedAt(),
+                item.getRejectionReason()
+        );
+    }
 
     default String findPrimaryImageUrl(Item item) {
         if (item.getImages() == null || item.getImages().isEmpty()) {

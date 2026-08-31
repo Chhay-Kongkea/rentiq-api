@@ -92,7 +92,7 @@ public interface ItemRequestRepository extends JpaRepository<ItemRequest, UUID>,
             @Param("latitude") double latitude,
             @Param("longitude") double longitude,
             @Param("radiusKm") double radiusKm,
-            @Param("categoryId") Short categoryId,
+            @Param("categoryId") UUID categoryId,
             Pageable pageable
     );
 }

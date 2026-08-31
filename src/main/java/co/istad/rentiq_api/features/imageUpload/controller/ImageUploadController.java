@@ -10,8 +10,13 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.UUID;
-
+/**
+ * {@code GET}/{@code DELETE} by image ID were removed (backend audit SEC-004): the underlying
+ * record has no owner field, so those endpoints let any authenticated user view or delete any
+ * other user's uploaded image. No production feature depends on them — item images, avatars,
+ * KYC documents, and review images each already have their own ownership-scoped upload/delete
+ * path. Only upload remains.
+ */
 @RestController
 @RequestMapping("/api/v1/images")
 @RequiredArgsConstructor
@@ -34,25 +39,5 @@ public class ImageUploadController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);
-    }
-
-    @GetMapping("/{imageId}")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ImageUploadResponse> getImage(
-            @PathVariable UUID imageId
-    ) {
-        return ResponseEntity.ok(
-                imageUploadService.getById(imageId)
-        );
-    }
-
-    @DeleteMapping("/{imageId}")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> deleteImage(
-            @PathVariable UUID imageId
-    ) {
-        imageUploadService.delete(imageId);
-
-        return ResponseEntity.noContent().build();
     }
 }

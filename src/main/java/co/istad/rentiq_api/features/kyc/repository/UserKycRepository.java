@@ -16,4 +16,8 @@ public interface UserKycRepository extends JpaRepository<UserKyc, UUID> {
     boolean existsByUserId(String userId);
 
     Page<UserKyc> findAllByVerificationStatus(String status, Pageable pageable);
+
+    long countByVerificationStatus(String status);
+
+    Page<UserKyc> findAllByOrderByCreatedAtDesc(Pageable pageable);
 }

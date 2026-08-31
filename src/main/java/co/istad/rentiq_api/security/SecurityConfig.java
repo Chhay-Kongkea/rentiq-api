@@ -1,5 +1,6 @@
 package co.istad.rentiq_api.security;
 
+import co.istad.rentiq_api.common.config.props.AppProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
@@ -35,8 +36,11 @@ public class SecurityConfig {
                 HttpSecurity http,
                 JwtAuthenticationConverter jwtAuthenticationConverter,
                 ClientRegistrationRepository clientRegistrationRepository,
-                BannedAccountFilter bannedAccountFilter
+                BannedAccountFilter bannedAccountFilter,
+                AppProperties appProperties
         ) throws Exception {
+
+                String frontendUrl = appProperties.getFrontendUrl();
 
                 DefaultOAuth2AuthorizationRequestResolver authorizationRequestResolver =
                         new DefaultOAuth2AuthorizationRequestResolver(
@@ -117,6 +121,20 @@ public class SecurityConfig {
 
 
                                 // ====================================================
+                                // LOCALIZATION - PUBLIC READ
+                                // Static UI translation strings — no mutation endpoint exists,
+                                // so only GET is permitted here (never a blanket path match).
+                                // ====================================================
+
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/v1/locales",
+                                        "/api/v1/locales/*/strings"
+                                )
+                                .permitAll()
+
+
+                                // ====================================================
                                 // AUTH - AUTHENTICATED
                                 // ====================================================
 
@@ -137,31 +155,15 @@ public class SecurityConfig {
 
                                 // ====================================================
                                 // GLOBAL IMAGE UPLOAD
+                                //
+                                // GET/DELETE by image ID were removed (backend audit SEC-004 —
+                                // the underlying record has no owner, so those endpoints had no
+                                // ownership enforcement). Only upload remains.
                                 // ====================================================
 
                                 .requestMatchers(
                                         HttpMethod.POST,
                                         "/api/v1/images/upload"
-                                )
-                                .hasAnyRole(
-                                        "USER",
-                                        "VENDOR",
-                                        "ADMIN"
-                                )
-
-                                .requestMatchers(
-                                        HttpMethod.GET,
-                                        "/api/v1/images/**"
-                                )
-                                .hasAnyRole(
-                                        "USER",
-                                        "VENDOR",
-                                        "ADMIN"
-                                )
-
-                                .requestMatchers(
-                                        HttpMethod.DELETE,
-                                        "/api/v1/images/**"
                                 )
                                 .hasAnyRole(
                                         "USER",
@@ -223,6 +225,102 @@ public class SecurityConfig {
                                         "/api/v1/vendors/me/items/**"
                                 )
                                 .hasRole("VENDOR")
+
+
+                                // ====================================================
+                                // PLATFORM PRICING - PUBLIC READ
+                                // Pricing information is not sensitive; the frontend must never
+                                // hard-code package prices, so this is readable by anyone.
+                                // ====================================================
+
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/v1/platform/pricing"
+                                )
+                                .permitAll()
+
+
+                                // ====================================================
+                                // ADVERTISEMENTS - PUBLIC READ
+                                // ====================================================
+
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/v1/advertisements",
+                                        "/api/v1/advertisements/*"
+                                )
+                                .permitAll()
+
+
+                                // ====================================================
+                                // ADVERTISEMENTS - VENDOR
+                                // ====================================================
+
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/api/v1/advertisements"
+                                )
+                                .hasRole("VENDOR")
+
+                                .requestMatchers(
+                                        HttpMethod.PATCH,
+                                        "/api/v1/advertisements/*"
+                                )
+                                .hasRole("VENDOR")
+
+                                .requestMatchers(
+                                        HttpMethod.DELETE,
+                                        "/api/v1/advertisements/*"
+                                )
+                                .hasRole("VENDOR")
+
+                                .requestMatchers(
+                                        "/api/v1/vendors/me/advertisements",
+                                        "/api/v1/vendors/me/advertisements/**"
+                                )
+                                .hasRole("VENDOR")
+
+
+                                // ====================================================
+                                // PROMOTIONS - PUBLIC ANALYTICS (impression/click counters)
+                                // ====================================================
+
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/api/v1/promotions/*/impression",
+                                        "/api/v1/promotions/*/click"
+                                )
+                                .permitAll()
+
+
+                                // ====================================================
+                                // PROMOTIONS - VENDOR
+                                // ====================================================
+
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/api/v1/promotions"
+                                )
+                                .hasRole("VENDOR")
+
+                                .requestMatchers(
+                                        HttpMethod.PATCH,
+                                        "/api/v1/promotions/*/cancel"
+                                )
+                                .hasRole("VENDOR")
+
+                                .requestMatchers(
+                                        "/api/v1/vendors/me/promotions",
+                                        "/api/v1/vendors/me/promotions/**"
+                                )
+                                .hasRole("VENDOR")
+
+
+                                // ====================================================
+                                // PROMOTIONS - VENDOR OR ADMIN (detail/stats)
+                                // Role check happens via @PreAuthorize on the controller;
+                                // the fallback anyRequest().authenticated() gate covers the URL.
+                                // ====================================================
 
 
                                 // ====================================================
@@ -614,24 +712,12 @@ public class SecurityConfig {
 
 
                                 // ====================================================
-                                // WALLET WEBHOOK
-                                //
-                                // Keep public because external payment provider
-                                // will normally not have a Keycloak access token.
-                                //
-                                // IMPORTANT:
-                                // Validate webhook signature inside controller/service.
-                                // ====================================================
-
-                                .requestMatchers(
-                                        HttpMethod.POST,
-                                        "/api/v1/wallets/topup-requests/webhook"
-                                )
-                                .permitAll()
-
-
-                                // ====================================================
                                 // VENDOR WALLET
+                                //
+                                // No public top-up webhook exists — the only wallet funding
+                                // path is Admin direct top-up (/api/v1/admin/wallets/*/topup,
+                                // ADMIN-only, covered by the blanket admin rule below). The old
+                                // vendor top-up-request + public webhook flow was removed.
                                 // ====================================================
 
                                 .requestMatchers(
@@ -701,14 +787,14 @@ public class SecurityConfig {
                                 .successHandler(
                                         (request, response, authentication) ->
                                                 response.sendRedirect(
-                                                        "http://localhost:8081/auth/callback"
+                                                        frontendUrl + "/auth/callback"
                                                 )
                                 )
 
                                 .failureHandler(
                                         (request, response, exception) ->
                                                 response.sendRedirect(
-                                                        "http://localhost:8081/login"
+                                                        frontendUrl + "/login"
                                                                 + "?error=keycloak_login_failed"
                                                 )
                                 )

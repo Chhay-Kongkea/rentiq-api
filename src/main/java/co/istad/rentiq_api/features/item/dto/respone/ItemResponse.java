@@ -13,7 +13,7 @@ import java.util.UUID;
 public record ItemResponse(
         UUID id,
         String ownerId,
-        Short categoryId,
+        java.util.UUID categoryId,
         String title,
         String description,
         ItemCondition condition,

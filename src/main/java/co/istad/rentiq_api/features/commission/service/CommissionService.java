@@ -6,12 +6,13 @@ import co.istad.rentiq_api.features.commission.dto.response.CommissionReportResp
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 public interface CommissionService {
 
     List<CommissionRateResponse> listCommissionRates();
 
-    CommissionRateResponse updateCommissionRate(Integer categoryId, UpdateCommissionRateRequest request, String adminId);
+    CommissionRateResponse updateCommissionRate(UUID categoryId, UpdateCommissionRateRequest request, String adminId);
 
     CommissionReportResponse getCommissionReport(LocalDate from, LocalDate to);
 }

@@ -1,24 +1,27 @@
 package co.istad.rentiq_api.features.wallet.service.impl;
 
 
-import co.istad.rentiq_api.common.config.props.WalletGatewayProperties;
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditAction;
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditTargetType;
+import co.istad.rentiq_api.features.adminAudit.service.AdminAuditService;
+import co.istad.rentiq_api.features.notification.enums.NotificationReferenceType;
+import co.istad.rentiq_api.features.notification.enums.NotificationType;
+import co.istad.rentiq_api.features.notification.service.NotificationService;
+import co.istad.rentiq_api.features.vendorApplication.enums.VendorApplicationStatus;
+import co.istad.rentiq_api.features.vendorApplication.repository.VendorApplicationRepository;
 import co.istad.rentiq_api.features.wallet.dto.request.AdminWalletAdjustRequest;
-import co.istad.rentiq_api.features.wallet.dto.request.CreateTopupRequest;
-import co.istad.rentiq_api.features.wallet.dto.request.TopupWebhookRequest;
-import co.istad.rentiq_api.features.wallet.dto.response.TopupRequestResponse;
+import co.istad.rentiq_api.features.wallet.dto.request.AdminWalletTopupRequest;
+import co.istad.rentiq_api.features.wallet.dto.response.AdminWalletTopupResponse;
 import co.istad.rentiq_api.features.wallet.dto.response.WalletResponse;
 import co.istad.rentiq_api.features.wallet.dto.response.WalletTransactionResponse;
 import co.istad.rentiq_api.features.wallet.entity.OwnerWallet;
-import co.istad.rentiq_api.features.wallet.entity.TopupRequest;
 import co.istad.rentiq_api.features.wallet.entity.WalletTransaction;
-import co.istad.rentiq_api.features.wallet.enums.TopupStatus;
 import co.istad.rentiq_api.features.wallet.enums.TransactionDirection;
 import co.istad.rentiq_api.features.wallet.enums.TransactionType;
 import co.istad.rentiq_api.features.wallet.enums.WalletStatus;
 import co.istad.rentiq_api.features.wallet.exception.WalletException;
 import co.istad.rentiq_api.features.wallet.mapper.WalletMapper;
 import co.istad.rentiq_api.features.wallet.repository.OwnerWalletRepository;
-import co.istad.rentiq_api.features.wallet.repository.TopupRequestRepository;
 import co.istad.rentiq_api.features.wallet.repository.WalletTransactionRepository;
 import co.istad.rentiq_api.features.wallet.service.WalletService;
 import lombok.RequiredArgsConstructor;
@@ -28,28 +31,32 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
-import java.security.InvalidKeyException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.util.Map;
 import java.util.UUID;
 
+/**
+ * The ONLY way to credit a wallet with TOP_UP/IN is {@link #adminTopupWallet} — Admin verifies
+ * an external payment and directly credits the vendor's wallet. The legacy vendor-initiated
+ * top-up-request + public webhook + admin-confirm flow (SEC-001 / BUS-001 in the backend audit)
+ * has been removed: it duplicated this funding path and its webhook was reachable with a
+ * committed fallback signing secret, allowing forged wallet credits. See
+ * {@code TopupRequest}/{@code TopupRequestRepository} for why those types remain (read-only,
+ * Admin Dashboard "recent activity" feed only — no code path writes to them anymore).
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class WalletServiceImpl implements WalletService {
 
     private static final BigDecimal WELCOME_BONUS_AMOUNT = new BigDecimal("5.00");
-    private static final String HMAC_ALGORITHM = "HmacSHA256";
 
     private final OwnerWalletRepository walletRepository;
     private final WalletTransactionRepository transactionRepository;
-    private final TopupRequestRepository topupRequestRepository;
     private final WalletMapper walletMapper;
-    private final WalletGatewayProperties gatewayProperties;
+    private final AdminAuditService adminAuditService;
+    private final VendorApplicationRepository vendorApplicationRepository;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -110,94 +117,6 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
-    @Transactional
-    public TopupRequestResponse createTopupRequest(String ownerId, CreateTopupRequest request) {
-        OwnerWallet wallet = walletRepository.findByOwnerId(ownerId)
-                .orElseGet(() -> walletRepository.save(
-                        OwnerWallet.builder()
-                                .ownerId(ownerId)
-                                .balance(BigDecimal.ZERO)
-                                .build()
-                ));
-
-        TopupRequest topup = TopupRequest.builder()
-                .walletId(wallet.getId())
-                .amount(request.amount())
-                .paymentMethod(request.paymentMethod() == null || request.paymentMethod().isBlank()
-                        ? "KHQR" : request.paymentMethod())
-                .status(TopupStatus.PENDING)
-                .bankReference(UUID.randomUUID().toString())
-                .build();
-
-        return walletMapper.toResponse(topupRequestRepository.save(topup));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<TopupRequestResponse> getTopupRequests(String ownerId, Pageable pageable) {
-        OwnerWallet wallet = requireWallet(ownerId);
-        return topupRequestRepository.findByWalletId(wallet.getId(), pageable).map(walletMapper::toResponse);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public TopupRequestResponse getTopupRequest(String ownerId, UUID topupRequestId) {
-        OwnerWallet wallet = requireWallet(ownerId);
-
-        TopupRequest topup = topupRequestRepository.findById(topupRequestId)
-                .orElseThrow(() -> WalletException.topupNotFound(topupRequestId));
-
-        if (!topup.getWalletId().equals(wallet.getId())) {
-            throw WalletException.topupNotFound(topupRequestId);
-        }
-
-        return walletMapper.toResponse(topup);
-    }
-
-    @Override
-    @Transactional
-    public TopupRequestResponse processTopupWebhook(TopupWebhookRequest request, String signature) {
-        verifySignature(request, signature);
-
-        // Row-level lock on the bank reference — a redelivered webhook for the same
-        // reference blocks here instead of racing a concurrent credit.
-        TopupRequest topup = topupRequestRepository.findByBankReferenceForUpdate(request.bankReference())
-                .orElseThrow(() -> WalletException.topupNotFoundByReference(request.bankReference()));
-
-        if (topup.getStatus() != TopupStatus.PENDING) {
-            // Already processed — idempotent no-op so gateway retries are safe.
-            log.info("Ignoring replayed webhook for bank reference {} (status already {})",
-                    request.bankReference(), topup.getStatus());
-            return walletMapper.toResponse(topup);
-        }
-
-        if (request.amount().compareTo(topup.getAmount()) != 0) {
-            throw WalletException.amountMismatch();
-        }
-
-        if (request.status() == TopupStatus.SUCCESS) {
-            OwnerWallet wallet = walletRepository.findByIdForUpdate(topup.getWalletId())
-                    .orElseThrow(() -> WalletException.notFoundById(topup.getWalletId()));
-
-            applyBalanceChange(
-                    wallet,
-                    topup.getAmount(),
-                    TransactionDirection.IN,
-                    TransactionType.TOP_UP,
-                    null, topup.getId(), null, null,
-                    "Wallet top-up via " + topup.getPaymentMethod()
-            );
-
-            topup.setStatus(TopupStatus.SUCCESS);
-        } else {
-            topup.setStatus(TopupStatus.EXPIRED);
-        }
-
-        topupRequestRepository.save(topup);
-        return walletMapper.toResponse(topup);
-    }
-
-    @Override
     @Transactional(readOnly = true)
     public Page<WalletResponse> adminListWallets(Pageable pageable) {
         return walletRepository.findAll(pageable).map(walletMapper::toResponse);
@@ -226,6 +145,8 @@ public class WalletServiceImpl implements WalletService {
         OwnerWallet wallet = walletRepository.findByIdForUpdate(walletId)
                 .orElseThrow(() -> WalletException.notFoundById(walletId));
 
+        BigDecimal previousBalance = wallet.getBalance();
+
         applyBalanceChange(
                 wallet,
                 request.amount(),
@@ -235,42 +156,119 @@ public class WalletServiceImpl implements WalletService {
                 "Manual adjustment by admin %s: %s".formatted(adminId, request.reason())
         );
 
+        adminAuditService.record(
+                request.direction() == TransactionDirection.IN
+                        ? AdminAuditAction.WALLET_CREDITED : AdminAuditAction.WALLET_DEBITED,
+                AdminAuditTargetType.WALLET,
+                walletId.toString(),
+                Map.of("balance", previousBalance),
+                Map.of("balance", wallet.getBalance(), "adjustmentAmount", request.amount()),
+                request.reason());
+
         return walletMapper.toResponse(wallet);
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public Page<TopupRequestResponse> adminListTopupRequests(Pageable pageable) {
-        return topupRequestRepository.findAll(pageable).map(walletMapper::toResponse);
+    @Transactional
+    public AdminWalletTopupResponse adminTopupWallet(UUID walletId, AdminWalletTopupRequest request, String adminId) {
+        OwnerWallet wallet = walletRepository.findByIdForUpdate(walletId)
+                .orElseThrow(() -> WalletException.notFoundById(walletId));
+
+        boolean isApprovedVendor = vendorApplicationRepository.findByUserId(wallet.getOwnerId())
+                .map(application -> application.getStatus() == VendorApplicationStatus.APPROVED)
+                .orElse(false);
+        if (!isApprovedVendor) {
+            throw WalletException.notAVendor(wallet.getOwnerId());
+        }
+
+        if (!request.currency().equals(wallet.getCurrency())) {
+            throw WalletException.currencyMismatch(wallet.getCurrency(), request.currency());
+        }
+
+        BigDecimal balanceBefore = wallet.getBalance();
+
+        WalletTransaction transaction = applyBalanceChange(
+                wallet,
+                request.amount(),
+                TransactionDirection.IN,
+                TransactionType.TOP_UP,
+                null, null, null, null,
+                topupDescription(adminId, request)
+        );
+
+        adminAuditService.record(
+                AdminAuditAction.WALLET_TOPPED_UP,
+                AdminAuditTargetType.WALLET,
+                walletId.toString(),
+                Map.of("balance", balanceBefore),
+                Map.of("balance", wallet.getBalance(), "topUpAmount", request.amount(), "currency", request.currency()),
+                request.note());
+
+        notificationService.notifyUser(
+                wallet.getOwnerId(),
+                NotificationType.PAYMENT,
+                "Wallet credited",
+                "Your Rentiq wallet was credited with " + request.amount() + " " + request.currency() + ".",
+                NotificationReferenceType.PAYMENT,
+                transaction.getId());
+
+        return new AdminWalletTopupResponse(
+                walletId, wallet.getOwnerId(), request.amount(), request.currency(),
+                balanceBefore, wallet.getBalance(), transaction.getId(), transaction.getCreatedAt());
+    }
+
+    private static String topupDescription(String adminId, AdminWalletTopupRequest request) {
+        StringBuilder description = new StringBuilder("Vendor paid admin ").append(adminId).append(" externally");
+        if (request.paymentMethod() != null && !request.paymentMethod().isBlank()) {
+            description.append(" via ").append(request.paymentMethod());
+        }
+        if (request.paymentReference() != null && !request.paymentReference().isBlank()) {
+            description.append(" (ref: ").append(request.paymentReference()).append(')');
+        }
+        if (request.note() != null && !request.note().isBlank()) {
+            description.append(" — ").append(request.note());
+        }
+        return description.toString();
     }
 
     @Override
     @Transactional
-    public TopupRequestResponse adminConfirmTopup(UUID topupRequestId, String adminId) {
-        TopupRequest topup = topupRequestRepository.findByIdForUpdate(topupRequestId)
-                .orElseThrow(() -> WalletException.topupNotFound(topupRequestId));
+    public void chargePromotion(UUID promotionId, String ownerId, BigDecimal amount, String currency) {
+        OwnerWallet wallet = walletRepository.findByOwnerIdForUpdate(ownerId)
+                .orElseThrow(() -> WalletException.notFoundForOwner(ownerId));
 
-        if (topup.getStatus() != TopupStatus.PENDING) {
-            throw WalletException.invalidTopupState(topup.getStatus().name());
+        if (!wallet.getCurrency().equals(currency)) {
+            throw WalletException.currencyMismatch(wallet.getCurrency(), currency);
         }
 
-        OwnerWallet wallet = walletRepository.findByIdForUpdate(topup.getWalletId())
-                .orElseThrow(() -> WalletException.notFoundById(topup.getWalletId()));
-
-        // Amount always comes from the stored request, never from this call's input.
         applyBalanceChange(
                 wallet,
-                topup.getAmount(),
-                TransactionDirection.IN,
-                TransactionType.TOP_UP,
-                null, topup.getId(), null, null,
-                "Manual top-up confirmation by admin " + adminId
+                amount,
+                TransactionDirection.OUT,
+                TransactionType.PROMOTION,
+                null, null, null, promotionId,
+                "Promotion charge for promotion " + promotionId
         );
+    }
 
-        topup.setStatus(TopupStatus.SUCCESS);
-        topupRequestRepository.save(topup);
+    @Override
+    @Transactional
+    public void chargeAdvertisement(UUID advertisementId, String ownerId, BigDecimal amount, String currency) {
+        OwnerWallet wallet = walletRepository.findByOwnerIdForUpdate(ownerId)
+                .orElseThrow(() -> WalletException.notFoundForOwner(ownerId));
 
-        return walletMapper.toResponse(topup);
+        if (!wallet.getCurrency().equals(currency)) {
+            throw WalletException.currencyMismatch(wallet.getCurrency(), currency);
+        }
+
+        applyBalanceChange(
+                wallet,
+                amount,
+                TransactionDirection.OUT,
+                TransactionType.ADVERTISEMENT,
+                null, null, advertisementId, null,
+                "Advertisement charge for advertisement " + advertisementId
+        );
     }
 
     private OwnerWallet requireWallet(String ownerId) {
@@ -297,6 +295,10 @@ public class WalletServiceImpl implements WalletService {
             throw WalletException.invalidAmount();
         }
 
+        if (direction == TransactionDirection.OUT && wallet.getBalance().compareTo(amount) < 0) {
+            throw WalletException.insufficientBalance(wallet.getBalance(), amount);
+        }
+
         BigDecimal newBalance = direction == TransactionDirection.IN
                 ? wallet.getBalance().add(amount)
                 : wallet.getBalance().subtract(amount);
@@ -319,41 +321,5 @@ public class WalletServiceImpl implements WalletService {
                 .build();
 
         return transactionRepository.save(transaction);
-    }
-
-    private void verifySignature(TopupWebhookRequest request, String signature) {
-        if (signature == null || signature.isBlank()) {
-            throw WalletException.invalidSignature();
-        }
-
-        String payload = request.bankReference() + ":" + request.amount().toPlainString() + ":" + request.status();
-        String expected = hmacSha256Hex(payload, gatewayProperties.getWebhookSecret());
-
-        boolean valid = MessageDigest.isEqual(
-                expected.getBytes(StandardCharsets.UTF_8),
-                signature.trim().toLowerCase().getBytes(StandardCharsets.UTF_8)
-        );
-
-        if (!valid) {
-            throw WalletException.invalidSignature();
-        }
-    }
-
-    private static String hmacSha256Hex(String data, String secret) {
-        try {
-            Mac mac = Mac.getInstance(HMAC_ALGORITHM);
-            mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), HMAC_ALGORITHM));
-
-            byte[] bytes = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
-            StringBuilder hex = new StringBuilder(bytes.length * 2);
-
-            for (byte b : bytes) {
-                hex.append(String.format("%02x", b));
-            }
-
-            return hex.toString();
-        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
-            throw new IllegalStateException("Failed to compute webhook HMAC signature", e);
-        }
     }
 }

@@ -37,25 +37,25 @@ class FinancialReportExportGenerator {
             Font labelFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12);
             Font textFont = FontFactory.getFont(FontFactory.HELVETICA, 12);
 
-            document.add(new Paragraph("Revenue Report", titleFont));
+            document.add(new Paragraph("Booking Value Report (Marketplace GMV)", titleFont));
             document.add(new Paragraph(
                     "Period: " + report.from().format(DATE_FORMAT) + " - " + report.to().format(DATE_FORMAT),
                     textFont));
             document.add(new Paragraph("Group By: " + report.groupBy(), textFont));
             document.add(new Paragraph(" "));
 
-            document.add(new Paragraph("Total Revenue: " + formatMoney(report.totalRevenue()), labelFont));
+            document.add(new Paragraph("Total Booking Value: " + formatMoney(report.totalBookingValue()), labelFont));
             document.add(new Paragraph("Total Bookings: " + report.totalBookings(), labelFont));
             document.add(new Paragraph(" "));
 
             PdfPTable table = new PdfPTable(3);
             table.addCell("Period");
-            table.addCell("Revenue");
+            table.addCell("Booking Value");
             table.addCell("Bookings");
 
             for (RevenuePeriodRow row : report.rows().getContent()) {
                 table.addCell(row.period().toString());
-                table.addCell(formatMoney(row.totalRevenue()));
+                table.addCell(formatMoney(row.totalBookingValue()));
                 table.addCell(String.valueOf(row.bookingCount()));
             }
 
@@ -70,29 +70,29 @@ class FinancialReportExportGenerator {
 
     byte[] generateRevenueXlsx(RevenueReportResponse report) {
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
-            Sheet sheet = workbook.createSheet("Revenue Report");
+            Sheet sheet = workbook.createSheet("Booking Value Report");
 
             int rowIndex = 0;
 
             Row summaryHeaderRow = sheet.createRow(rowIndex++);
-            summaryHeaderRow.createCell(0).setCellValue("Total Revenue");
+            summaryHeaderRow.createCell(0).setCellValue("Total Booking Value");
             summaryHeaderRow.createCell(1).setCellValue("Total Bookings");
 
             Row summaryRow = sheet.createRow(rowIndex++);
-            summaryRow.createCell(0).setCellValue(toDouble(report.totalRevenue()));
+            summaryRow.createCell(0).setCellValue(toDouble(report.totalBookingValue()));
             summaryRow.createCell(1).setCellValue(report.totalBookings());
 
             rowIndex++;
 
             Row header = sheet.createRow(rowIndex++);
             header.createCell(0).setCellValue("Period");
-            header.createCell(1).setCellValue("Revenue");
+            header.createCell(1).setCellValue("Booking Value");
             header.createCell(2).setCellValue("Bookings");
 
             for (RevenuePeriodRow row : report.rows().getContent()) {
                 Row dataRow = sheet.createRow(rowIndex++);
                 setSanitizedString(dataRow.createCell(0), row.period().toString());
-                dataRow.createCell(1).setCellValue(toDouble(row.totalRevenue()));
+                dataRow.createCell(1).setCellValue(toDouble(row.totalBookingValue()));
                 dataRow.createCell(2).setCellValue(row.bookingCount());
             }
 

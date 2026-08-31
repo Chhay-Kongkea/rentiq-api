@@ -24,6 +24,7 @@ import jakarta.validation.ConstraintViolationException;
 
 import lombok.extern.slf4j.Slf4j;
 
+import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,6 +36,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
@@ -534,6 +536,26 @@ public class GlobalExceptionHandler {
                 Map.of()
         );
         return ResponseEntity.status(status).body(errorResponse);
+    }
+
+
+    /**
+     * The client closed/cancelled the connection while we were writing a response (typically a
+     * PDF/XLSX download) — Tomcat's socket write fails with {@link ClientAbortException}, which
+     * Spring wraps as {@link AsyncRequestNotUsableException}. This is a normal client-side
+     * event, not a backend failure: the connection is already gone, so there is nothing left to
+     * respond to. Deliberately returns void — writing another response body here would just
+     * trigger the same exception again. Registered ahead of {@link #handleUnexpectedException}
+     * so it takes precedence and this never gets logged as an "Unexpected error".
+     */
+    @ExceptionHandler({AsyncRequestNotUsableException.class, ClientAbortException.class})
+    public void handleClientDisconnect(Exception exception, HttpServletRequest request) {
+        log.debug(
+                "Client disconnected before response completed: {} {} ({})",
+                request.getMethod(),
+                request.getRequestURI(),
+                exception.getMessage()
+        );
     }
 
 

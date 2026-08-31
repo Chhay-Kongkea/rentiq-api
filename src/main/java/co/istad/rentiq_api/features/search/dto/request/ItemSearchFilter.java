@@ -21,7 +21,7 @@ public record ItemSearchFilter(
         @DecimalMin(value = "0.0", message = "Maximum price cannot be negative")
         BigDecimal maxPrice,
 
-        Short categoryId,
+        java.util.UUID categoryId,
 
         ItemCondition condition,
 

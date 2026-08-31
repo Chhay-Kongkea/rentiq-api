@@ -8,6 +8,7 @@ import co.istad.rentiq_api.features.bookings.dto.response.BookingResponse;
 import co.istad.rentiq_api.features.bookings.dto.response.BookingStatusHistoryResponse;
 import co.istad.rentiq_api.features.bookings.dto.response.PageResponse;
 import co.istad.rentiq_api.features.bookings.enums.BookingStatus;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -17,7 +18,7 @@ public interface BookingService {
 
     BookingResponse create(CreateBookingRequest request, String customerId);
 
-    List<BookingResponse> findMyBookings(String customerId);
+    PageResponse<BookingResponse> findMyBookings(String customerId, Pageable pageable);
 
     BookingResponse findById(UUID bookingId, String callerId, boolean isAdmin);
 
@@ -25,7 +26,7 @@ public interface BookingService {
 
     BookingResponse updateStatus(UUID bookingId, UpdateBookingStatusRequest request, String callerId, boolean isAdmin);
 
-    List<BookingResponse> findVendorBookings(String ownerId);
+    PageResponse<BookingResponse> findVendorBookings(String ownerId, Pageable pageable);
 
     List<BookingResponse> getVendorSchedule(String ownerId, LocalDate from, LocalDate to);
 

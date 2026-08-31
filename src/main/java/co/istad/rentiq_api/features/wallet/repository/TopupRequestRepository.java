@@ -12,6 +12,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 import java.util.UUID;
+import co.istad.rentiq_api.features.wallet.enums.TopupStatus;
 
 public interface TopupRequestRepository extends JpaRepository<TopupRequest, UUID> {
 
@@ -24,4 +25,8 @@ public interface TopupRequestRepository extends JpaRepository<TopupRequest, UUID
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select t from TopupRequest t where t.id = :id")
     Optional<TopupRequest> findByIdForUpdate(@Param("id") UUID id);
+
+    long countByStatus(TopupStatus status);
+
+    Page<TopupRequest> findAllByOrderByCreatedAtDesc(Pageable pageable);
 }

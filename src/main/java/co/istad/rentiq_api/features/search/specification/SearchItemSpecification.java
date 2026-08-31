@@ -3,16 +3,30 @@ package co.istad.rentiq_api.features.search.specification;
 import co.istad.rentiq_api.features.item.entity.Item;
 import co.istad.rentiq_api.features.item.enums.ItemApprovalStatus;
 import co.istad.rentiq_api.features.item.enums.ItemStatus;
+import co.istad.rentiq_api.features.promotion.entity.Promotion;
+import co.istad.rentiq_api.features.promotion.enums.PromotionStatus;
 import co.istad.rentiq_api.features.search.dto.request.ItemSearchFilter;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Order;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Locale;
+import java.util.UUID;
 
 public final class SearchItemSpecification {
 
     private SearchItemSpecification() {}
 
-    public static Specification<Item> build(ItemSearchFilter filter) {
+    /**
+     * sortField must already be validated against an allow-list by the caller (see
+     * SearchServiceImpl) — it's interpolated as a raw entity attribute path here.
+     */
+    public static Specification<Item> build(ItemSearchFilter filter, String sortField, Sort.Direction sortDirection) {
         return Specification
                 .where(notDeleted())
                 .and(approved())
@@ -25,7 +39,51 @@ public final class SearchItemSpecification {
                 .and(availabilityEquals(filter))
                 .and(featuredEquals(filter))
                 .and(locationContains(filter))
-                .and(minimumRating(filter));
+                .and(minimumRating(filter))
+                .and(promotedFirstThenRequestedOrder(sortField, sortDirection));
+    }
+
+    /**
+     * Side-effecting: sets the query's ORDER BY directly — promoted items first (an EXISTS
+     * subquery against effectively-active Promotions, evaluated DB-side, before pagination),
+     * then the caller's requested secondary field/direction. This never touches the WHERE
+     * predicates above, so it cannot bypass keyword/category/filter relevance — it only
+     * reorders items that already satisfied every other criterion.
+     *
+     * Must be paired with an UNSORTED Pageable (see SearchServiceImpl): Spring Data applies
+     * Pageable.getSort() to the query AFTER the Specification runs and would silently
+     * overwrite this order otherwise.
+     */
+    private static Specification<Item> promotedFirstThenRequestedOrder(String sortField, Sort.Direction sortDirection) {
+        return (root, query, cb) -> {
+            boolean isRowQuery = query.getResultType() != Long.class && query.getResultType() != long.class;
+
+            if (isRowQuery) {
+                Subquery<UUID> activePromotion = query.subquery(UUID.class);
+                Root<Promotion> promotionRoot = activePromotion.from(Promotion.class);
+                OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+
+                activePromotion.select(promotionRoot.get("id"))
+                        .where(
+                                cb.equal(promotionRoot.get("itemId"), root.get("id")),
+                                cb.equal(promotionRoot.get("status"), PromotionStatus.ACTIVE),
+                                cb.lessThanOrEqualTo(promotionRoot.get("startAt"), now),
+                                cb.greaterThan(promotionRoot.get("endAt"), now)
+                        );
+
+                Expression<Integer> promotedRank = cb.<Integer>selectCase()
+                        .when(cb.exists(activePromotion), 0)
+                        .otherwise(1);
+
+                Order secondary = sortDirection == Sort.Direction.ASC
+                        ? cb.asc(root.get(sortField))
+                        : cb.desc(root.get(sortField));
+
+                query.orderBy(cb.asc(promotedRank), secondary);
+            }
+
+            return cb.conjunction();
+        };
     }
 
     private static Specification<Item> notDeleted() {

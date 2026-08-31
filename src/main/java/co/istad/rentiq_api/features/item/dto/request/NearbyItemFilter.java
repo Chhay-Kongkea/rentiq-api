@@ -18,7 +18,7 @@ public record NearbyItemFilter(
         @DecimalMax(value = "200.0", message = "Radius cannot exceed 200 km")
         Double radiusKm,
 
-        Short categoryId,
+        java.util.UUID categoryId,
 
         @Min(0)
         Integer pageNumber,

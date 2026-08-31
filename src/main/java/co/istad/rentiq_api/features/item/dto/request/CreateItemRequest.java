@@ -8,7 +8,7 @@ import java.util.Map;
 public record CreateItemRequest(
 
         @NotNull(message = "Category is required")
-        Short categoryId,
+        java.util.UUID categoryId,
 
         @NotBlank(message = "Title is required")
         @Size(min = 3, max = 200, message = "Title must contain between 3 and 200 characters")

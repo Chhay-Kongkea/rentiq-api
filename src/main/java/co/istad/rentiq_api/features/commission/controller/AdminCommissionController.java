@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/admin/commissions")
@@ -29,7 +30,7 @@ public class AdminCommissionController {
 
     @PatchMapping("/{categoryId}")
     public CommissionRateResponse updateCommissionRate(
-            @PathVariable Integer categoryId,
+            @PathVariable UUID categoryId,
             @Valid @RequestBody UpdateCommissionRateRequest request
     ) {
         return commissionService.updateCommissionRate(categoryId, request, AuthUtils.extractUserId());

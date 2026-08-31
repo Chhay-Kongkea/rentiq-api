@@ -2,7 +2,9 @@ package co.istad.rentiq_api.features.commission.service.impl;
 
 import co.istad.rentiq_api.common.exception.InvalidOperationException;
 import co.istad.rentiq_api.common.exception.NotFoundException;
-import co.istad.rentiq_api.features.bookings.enums.PaymentStatus;
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditAction;
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditTargetType;
+import co.istad.rentiq_api.features.adminAudit.service.AdminAuditService;
 import co.istad.rentiq_api.features.bookings.repository.BookingRepository;
 import co.istad.rentiq_api.features.category.Category;
 import co.istad.rentiq_api.features.category.CategoryRepository;
@@ -25,6 +27,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,6 +40,7 @@ public class CommissionServiceImpl implements CommissionService {
     private final BookingRepository bookingRepository;
     private final CommissionRateAuditRepository auditRepository;
     private final CommissionMapper commissionMapper;
+    private final AdminAuditService adminAuditService;
 
     @Override
     @Transactional(readOnly = true)
@@ -48,7 +52,7 @@ public class CommissionServiceImpl implements CommissionService {
 
     @Override
     @Transactional
-    public CommissionRateResponse updateCommissionRate(Integer categoryId, UpdateCommissionRateRequest request, String adminId) {
+    public CommissionRateResponse updateCommissionRate(UUID categoryId, UpdateCommissionRateRequest request, String adminId) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new NotFoundException("Category", categoryId));
 
@@ -67,6 +71,14 @@ public class CommissionServiceImpl implements CommissionService {
                 .changedBy(adminId)
                 .reason(request.reason())
                 .build());
+
+        adminAuditService.record(
+                AdminAuditAction.COMMISSION_RATE_UPDATED,
+                AdminAuditTargetType.CATEGORY,
+                categoryId.toString(),
+                Map.of("commissionRate", oldRate),
+                Map.of("commissionRate", newRate),
+                request.reason());
 
         return commissionMapper.toRateResponse(category);
     }
@@ -92,16 +104,16 @@ public class CommissionServiceImpl implements CommissionService {
         OffsetDateTime toExclusive = effectiveTo.plusDays(1).atStartOfDay(ZoneOffset.UTC).toOffsetDateTime();
 
         List<CommissionByCategoryProjection> rows = bookingRepository.aggregateCommissionByCategory(
-                PaymentStatus.RELEASED_TO_VENDOR, fromInclusive, toExclusive);
+                fromInclusive, toExclusive);
 
-        Map<Integer, String> categoryNames = categoryRepository.findAllById(
-                        rows.stream().map(row -> row.getCategoryId().intValue()).toList())
+        Map<UUID, String> categoryNames = categoryRepository.findAllById(
+                        rows.stream().map(CommissionByCategoryProjection::getCategoryId).toList())
                 .stream()
                 .collect(Collectors.toMap(Category::getId, Category::getName));
 
         List<CategoryCommissionSummary> byCategory = rows.stream()
                 .map(row -> {
-                    Integer categoryId = row.getCategoryId().intValue();
+                    UUID categoryId = row.getCategoryId();
                     return new CategoryCommissionSummary(
                             categoryId,
                             categoryNames.getOrDefault(categoryId, "Unknown Category"),

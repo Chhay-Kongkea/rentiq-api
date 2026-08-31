@@ -1,5 +1,8 @@
 package co.istad.rentiq_api.features.bookingDispute.service.impl;
 
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditAction;
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditTargetType;
+import co.istad.rentiq_api.features.adminAudit.service.AdminAuditService;
 import co.istad.rentiq_api.features.bookings.entity.Booking;
 import co.istad.rentiq_api.features.bookings.repository.BookingRepository;
 import co.istad.rentiq_api.features.bookingDispute.dto.request.CreateDisputeRequest;
@@ -14,6 +17,9 @@ import co.istad.rentiq_api.features.bookingDispute.exception.DisputeNotOpenExcep
 import co.istad.rentiq_api.features.bookingDispute.mapper.DisputeMapper;
 import co.istad.rentiq_api.features.bookingDispute.repository.BookingDisputeRepository;
 import co.istad.rentiq_api.features.bookingDispute.service.DisputeService;
+import co.istad.rentiq_api.features.notification.enums.NotificationReferenceType;
+import co.istad.rentiq_api.features.notification.enums.NotificationType;
+import co.istad.rentiq_api.features.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -31,6 +38,8 @@ public class DisputeServiceImpl implements DisputeService {
     private final BookingDisputeRepository disputeRepository;
     private final BookingRepository bookingRepository;
     private final DisputeMapper disputeMapper;
+    private final AdminAuditService adminAuditService;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -111,6 +120,8 @@ public class DisputeServiceImpl implements DisputeService {
         BookingDispute dispute = disputeRepository.findById(disputeId)
                 .orElseThrow(() -> new DisputeNotFoundException(disputeId));
 
+        String previousStatus = dispute.getStatus();
+
         dispute.setStatus(request.status().toUpperCase());
         dispute.setResolvedBy(adminId);
         dispute.setResolvedAt(Instant.now());
@@ -120,6 +131,35 @@ public class DisputeServiceImpl implements DisputeService {
         }
 
         disputeRepository.save(dispute);
+
+        adminAuditService.record(
+                AdminAuditAction.DISPUTE_RESOLVED,
+                AdminAuditTargetType.DISPUTE,
+                dispute.getId().toString(),
+                Map.of("status", previousStatus),
+                Map.of("status", dispute.getStatus()),
+                request.notes());
+
+        bookingRepository.findById(dispute.getBookingId()).ifPresent(booking -> {
+            notificationService.notifyUser(
+                    booking.getCustomerId(),
+                    NotificationType.DISPUTE,
+                    "Dispute resolved",
+                    "A dispute on your booking has been resolved by an administrator.",
+                    NotificationReferenceType.DISPUTE,
+                    dispute.getId());
+
+            if (!booking.getOwnerId().equals(booking.getCustomerId())) {
+                notificationService.notifyUser(
+                        booking.getOwnerId(),
+                        NotificationType.DISPUTE,
+                        "Dispute resolved",
+                        "A dispute on your booking has been resolved by an administrator.",
+                        NotificationReferenceType.DISPUTE,
+                        dispute.getId());
+            }
+        });
+
         return disputeMapper.toResponse(dispute);
     }
 

@@ -4,6 +4,9 @@ import co.istad.rentiq_api.common.config.props.KeycloakAdminClientProps;
 import co.istad.rentiq_api.common.exception.ForbiddenException;
 import co.istad.rentiq_api.common.exception.InvalidStateException;
 import co.istad.rentiq_api.common.exception.NotFoundException;
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditAction;
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditTargetType;
+import co.istad.rentiq_api.features.adminAudit.service.AdminAuditService;
 import co.istad.rentiq_api.features.adminUserManagement.dto.response.AdminUserResponse;
 import co.istad.rentiq_api.features.adminUserManagement.dto.response.AdminUserStatusResponse;
 import co.istad.rentiq_api.features.adminUserManagement.dto.response.AdminVendorResponse;
@@ -28,6 +31,7 @@ import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +40,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +52,7 @@ import java.util.Set;
 public class AdminUserManagementServiceImpl implements AdminUserManagementService {
 
     private static final String KYC_NOT_SUBMITTED = "NOT_SUBMITTED";
+    private static final int MAX_USER_PAGE_SIZE = 100;
 
     private final UserRepository userRepository;
     private final UserKycRepository userKycRepository;
@@ -54,11 +62,41 @@ public class AdminUserManagementServiceImpl implements AdminUserManagementServic
     private final ReviewRepository reviewRepository;
     private final Keycloak keycloak;
     private final KeycloakAdminClientProps keycloakProps;
+    private final AdminAuditService adminAuditService;
 
     @Override
     public Page<AdminUserResponse> listUsers(Pageable pageable) {
-        return userRepository.findAll(pageable)
+        Pageable bounded = boundedPageable(pageable);
+        return userRepository.findAll(bounded)
                 .map(this::toAdminUserResponse);
+    }
+
+    @Override
+    public Page<AdminUserResponse> listUsers(String search, Pageable pageable) {
+        if (search == null || search.isBlank()) {
+            return listUsers(pageable);
+        }
+
+        Pageable bounded = boundedPageable(pageable);
+        String query = search.trim();
+        try {
+            List<UserRepresentation> identities = keycloak.realm(keycloakProps.getTargetRealm())
+                    .users().search(query, Math.toIntExact(bounded.getOffset()), bounded.getPageSize());
+            Map<String, User> localUsers = userRepository.findAllById(
+                            identities.stream().map(UserRepresentation::getId).toList())
+                    .stream()
+                    .collect(Collectors.toMap(User::getId, Function.identity()));
+
+            List<AdminUserResponse> content = identities.stream()
+                    .map(identity -> localUsers.get(identity.getId()))
+                    .filter(java.util.Objects::nonNull)
+                    .map(this::toAdminUserResponse)
+                    .toList();
+            long total = keycloak.realm(keycloakProps.getTargetRealm()).users().count(query);
+            return new PageImpl<>(content, bounded, total);
+        } catch (RuntimeException exception) {
+            throw new KeycloakOperationException("Failed to search identity users", exception);
+        }
     }
 
     @Override
@@ -152,6 +190,14 @@ public class AdminUserManagementServiceImpl implements AdminUserManagementServic
             revokeKeycloakSessionsQuietly(user.getId());
         }
 
+        adminAuditService.record(
+                actionFor(newStatus),
+                AdminAuditTargetType.USER,
+                user.getId(),
+                Map.of("status", previousStatus.name()),
+                Map.of("status", newStatus.name()),
+                reason);
+
         return new AdminUserStatusResponse(
                 user.getId(),
                 previousStatus,
@@ -159,6 +205,14 @@ public class AdminUserManagementServiceImpl implements AdminUserManagementServic
                 reason,
                 user.getUpdatedAt()
         );
+    }
+
+    private AdminAuditAction actionFor(AccountStatus newStatus) {
+        return switch (newStatus) {
+            case SUSPENDED -> AdminAuditAction.USER_SUSPENDED;
+            case BANNED -> AdminAuditAction.USER_BANNED;
+            case ACTIVE -> AdminAuditAction.USER_REINSTATED;
+        };
     }
 
     private User requireModeratableUser(String userId, String adminId) {
@@ -268,6 +322,11 @@ public class AdminUserManagementServiceImpl implements AdminUserManagementServic
         } catch (RuntimeException e) {
             throw new KeycloakOperationException("Failed to load identity data for user " + userId, e);
         }
+    }
+
+    private Pageable boundedPageable(Pageable pageable) {
+        int size = Math.max(1, Math.min(pageable.getPageSize(), MAX_USER_PAGE_SIZE));
+        return PageRequest.of(pageable.getPageNumber(), size, pageable.getSort());
     }
 
     private void syncKeycloakEnabledState(String userId, boolean enabled) {

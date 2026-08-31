@@ -66,7 +66,7 @@ public final class ItemRequestSpecification {
         };
     }
 
-    private static Specification<ItemRequest> categoryEquals(Short categoryId) {
+    private static Specification<ItemRequest> categoryEquals(java.util.UUID categoryId) {
         return (root, query, cb) ->
                 categoryId == null
                         ? cb.conjunction()

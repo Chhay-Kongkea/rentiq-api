@@ -7,7 +7,7 @@ public record SearchLogResponse(
         UUID id,
         String userId,
         String keyword,
-        Short categoryId,
+        java.util.UUID categoryId,
         Double latitude,
         Double longitude,
         OffsetDateTime createdAt

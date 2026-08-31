@@ -30,7 +30,7 @@ public class ItemRequest {
     private String customerId;
 
     @Column(name = "category_id", nullable = false)
-    private Short categoryId;
+    private UUID categoryId;
 
     @Column(nullable = false, length = 200)
     private String title;

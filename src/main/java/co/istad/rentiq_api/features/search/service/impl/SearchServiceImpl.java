@@ -51,15 +51,19 @@ public class SearchServiceImpl implements SearchService {
     @Override
     @Transactional
     public PageResponse<ItemResponse> searchItems(ItemSearchFilter filter, String authenticatedUserId) {
-        Pageable pageable = createPageable(
-                filter.pageNumber(),
-                filter.pageSize(),
-                filter.sortBy(),
-                filter.sortDirection()
+        String safeSortField = ALLOWED_SORT_FIELDS.contains(filter.sortBy()) ? filter.sortBy() : "createdAt";
+        Sort.Direction direction = "asc".equalsIgnoreCase(filter.sortDirection()) ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+        // Deliberately unsorted: the promoted-first order is set inside the Specification
+        // itself (see SearchItemSpecification), which only works if Spring Data doesn't
+        // separately apply Pageable.getSort() and overwrite it.
+        Pageable pageable = PageRequest.of(
+                normalizePageNumber(filter.pageNumber()),
+                normalizePageSize(filter.pageSize())
         );
 
         Page<Item> itemPage = itemRepository.findAll(
-                SearchItemSpecification.build(filter),
+                SearchItemSpecification.build(filter, safeSortField, direction),
                 pageable
         );
 
@@ -157,7 +161,7 @@ public class SearchServiceImpl implements SearchService {
         return PageResponse.from(response);
     }
 
-    private void saveSearchLog(String userId, String keyword, Short categoryId, Double latitude, Double longitude) {
+    private void saveSearchLog(String userId, String keyword, java.util.UUID categoryId, Double latitude, Double longitude) {
         SearchLog.SearchLogBuilder builder = SearchLog.builder()
                         .userId(userId)
                         .keyword(normalize(keyword))
@@ -175,21 +179,6 @@ public class SearchServiceImpl implements SearchService {
         searchLogRepository.save(builder.build());
     }
 
-    private Pageable createPageable(Integer pageNumber, Integer pageSize, String sortBy, String sortDirection) {
-        String safeSortField = ALLOWED_SORT_FIELDS.contains(sortBy)
-                        ? sortBy
-                        : "createdAt";
-
-        Sort.Direction direction = "asc".equalsIgnoreCase(sortDirection)
-                        ? Sort.Direction.ASC
-                        : Sort.Direction.DESC;
-
-        return PageRequest.of(
-                normalizePageNumber(pageNumber),
-                normalizePageSize(pageSize),
-                Sort.by(direction, safeSortField)
-        );
-    }
 
     private int normalizePageNumber(Integer pageNumber) {
         if (pageNumber == null) {

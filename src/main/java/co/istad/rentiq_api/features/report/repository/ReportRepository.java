@@ -1,6 +1,7 @@
 package co.istad.rentiq_api.features.report.repository;
 
 import co.istad.rentiq_api.features.report.entity.Report;
+import co.istad.rentiq_api.features.report.enums.ReportStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -20,4 +21,8 @@ public interface ReportRepository extends JpaRepository<Report, UUID>, JpaSpecif
     @Override
     @EntityGraph(attributePaths = "actions")
     Optional<Report> findById(UUID reportId);
+
+    long countByStatusIn(java.util.Collection<ReportStatus> statuses);
+
+    Page<Report> findAllByOrderByCreatedAtDesc(Pageable pageable);
 }

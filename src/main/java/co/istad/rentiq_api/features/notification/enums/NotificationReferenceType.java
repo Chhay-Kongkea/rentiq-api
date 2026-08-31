@@ -6,5 +6,13 @@ public enum NotificationReferenceType {
     ITEM_REQUEST,
     OFFER,
     ITEM,
-    USER
+    USER,
+
+    VENDOR_APPLICATION,
+    KYC,
+    ADVERTISEMENT,
+    PROMOTION,
+    DISPUTE,
+    REPORT,
+    REVIEW
 }

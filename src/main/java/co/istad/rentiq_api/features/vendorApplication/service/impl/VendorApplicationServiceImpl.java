@@ -3,11 +3,17 @@ package co.istad.rentiq_api.features.vendorApplication.service.impl;
 import co.istad.rentiq_api.common.exception.DuplicateException;
 import co.istad.rentiq_api.common.exception.InvalidStateException;
 import co.istad.rentiq_api.common.exception.NotFoundException;
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditAction;
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditTargetType;
+import co.istad.rentiq_api.features.adminAudit.service.AdminAuditService;
 import co.istad.rentiq_api.features.auth.RoleEnum;
 import co.istad.rentiq_api.features.auth.service.KeycloakRoleService;
 import co.istad.rentiq_api.features.kyc.KycStatus;
 import co.istad.rentiq_api.features.kyc.entity.UserKyc;
 import co.istad.rentiq_api.features.kyc.repository.UserKycRepository;
+import co.istad.rentiq_api.features.notification.enums.NotificationReferenceType;
+import co.istad.rentiq_api.features.notification.enums.NotificationType;
+import co.istad.rentiq_api.features.notification.service.NotificationService;
 import co.istad.rentiq_api.features.userProfile.repository.UserAddressRepository;
 import co.istad.rentiq_api.features.vendorApplication.dto.request.RejectVendorApplicationRequest;
 import co.istad.rentiq_api.features.vendorApplication.dto.request.SubmitVendorApplicationRequest;
@@ -24,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -35,6 +42,8 @@ public class VendorApplicationServiceImpl implements VendorApplicationService {
     private final UserKycRepository kycRepository;
     private final UserAddressRepository userAddressRepository;
     private final KeycloakRoleService keycloakRoleService;
+    private final AdminAuditService adminAuditService;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -113,6 +122,22 @@ public class VendorApplicationServiceImpl implements VendorApplicationService {
 
         keycloakRoleService.assignRealmRole(saved.getUserId(), RoleEnum.VENDOR);
 
+        adminAuditService.record(
+                AdminAuditAction.VENDOR_APPLICATION_APPROVED,
+                AdminAuditTargetType.VENDOR_APPLICATION,
+                saved.getId().toString(),
+                Map.of("status", VendorApplicationStatus.PENDING.name()),
+                Map.of("status", VendorApplicationStatus.APPROVED.name()),
+                null);
+
+        notificationService.notifyUser(
+                saved.getUserId(),
+                NotificationType.VENDOR_APPLICATION,
+                "Application approved",
+                "Your vendor application has been approved.",
+                NotificationReferenceType.VENDOR_APPLICATION,
+                saved.getId());
+
         return toAdminResponse(saved);
     }
 
@@ -131,7 +156,25 @@ public class VendorApplicationServiceImpl implements VendorApplicationService {
         application.setReviewedBy(adminId);
         application.setReviewedAt(OffsetDateTime.now());
 
-        return toAdminResponse(applicationRepository.save(application));
+        VendorApplication saved = applicationRepository.save(application);
+
+        adminAuditService.record(
+                AdminAuditAction.VENDOR_APPLICATION_REJECTED,
+                AdminAuditTargetType.VENDOR_APPLICATION,
+                saved.getId().toString(),
+                Map.of("status", VendorApplicationStatus.PENDING.name()),
+                Map.of("status", VendorApplicationStatus.REJECTED.name()),
+                request.reason());
+
+        notificationService.notifyUser(
+                saved.getUserId(),
+                NotificationType.VENDOR_APPLICATION,
+                "Application rejected",
+                "Your vendor application was not approved. Please review the reason and update your application.",
+                NotificationReferenceType.VENDOR_APPLICATION,
+                saved.getId());
+
+        return toAdminResponse(saved);
     }
 
     private VendorApplication prepareResubmission(

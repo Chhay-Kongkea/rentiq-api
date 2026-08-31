@@ -27,7 +27,7 @@ public class SearchLog {
     private String keyword;
 
     @Column(name = "category_id")
-    private Short categoryId;
+    private UUID categoryId;
 
     @Column(name = "location", columnDefinition = "geography(Point,4326)")
     private Point location;

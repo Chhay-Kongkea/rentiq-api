@@ -2,11 +2,16 @@ package co.istad.rentiq_api.features.item.service.impl;
 
 
 
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditAction;
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditTargetType;
+import co.istad.rentiq_api.features.adminAudit.service.AdminAuditService;
 import co.istad.rentiq_api.features.item.dto.request.CreateItemRequest;
+import co.istad.rentiq_api.features.item.dto.request.AdminItemFilter;
 import co.istad.rentiq_api.features.item.dto.request.ItemFilter;
 import co.istad.rentiq_api.features.item.dto.request.NearbyItemFilter;
 import co.istad.rentiq_api.features.item.dto.request.UpdateItemRequest;
 import co.istad.rentiq_api.features.item.dto.respone.ItemResponse;
+import co.istad.rentiq_api.features.item.dto.respone.AdminItemResponse;
 import co.istad.rentiq_api.features.item.dto.respone.PageResponse;
 import co.istad.rentiq_api.features.item.entity.Item;
 import co.istad.rentiq_api.features.item.enums.ItemApprovalStatus;
@@ -18,7 +23,11 @@ import co.istad.rentiq_api.features.item.exception.ItemNotFoundException;
 import co.istad.rentiq_api.features.item.mapper.ItemMapper;
 import co.istad.rentiq_api.features.item.repository.ItemRepository;
 import co.istad.rentiq_api.features.item.service.ItemService;
+import co.istad.rentiq_api.features.item.service.ItemSpecificationValidator;
 import co.istad.rentiq_api.features.item.specification.ItemSpecification;
+import co.istad.rentiq_api.features.notification.enums.NotificationReferenceType;
+import co.istad.rentiq_api.features.notification.enums.NotificationType;
+import co.istad.rentiq_api.features.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -29,6 +38,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -51,10 +62,15 @@ public class ItemServiceImpl implements ItemService {
 
     private final ItemRepository itemRepository;
     private final ItemMapper itemMapper;
+    private final AdminAuditService adminAuditService;
+    private final NotificationService notificationService;
+    private final ItemSpecificationValidator itemSpecificationValidator;
 
     @Override
     @Transactional
     public ItemResponse createItem(CreateItemRequest request, String authenticatedUserId) {
+
+        itemSpecificationValidator.validate(request.categoryId(), request.specifications());
 
         Item item = itemMapper.toEntity(request, authenticatedUserId);
         Item savedItem = itemRepository.save(item);
@@ -80,6 +96,28 @@ public class ItemServiceImpl implements ItemService {
         Item item = getOwnedItem(itemId, authenticatedUserId);
 
         return itemMapper.toResponse(item);
+    }
+
+    @Override
+    public PageResponse<AdminItemResponse> getAdminItems(
+            AdminItemFilter filter,
+            int pageNumber,
+            int pageSize,
+            String sortBy,
+            String sortDirection
+    ) {
+        Pageable pageable = createPageable(pageNumber, pageSize, sortBy, sortDirection);
+        Page<AdminItemResponse> page = itemRepository
+                .findAll(ItemSpecification.adminModerationFilter(filter), pageable)
+                .map(itemMapper::toAdminResponse);
+        return PageResponse.from(page);
+    }
+
+    @Override
+    public AdminItemResponse getAdminItemById(UUID itemId) {
+        Item item = itemRepository.findByIdAndDeletedFalse(itemId)
+                .orElseThrow(() -> new ItemNotFoundException(itemId));
+        return itemMapper.toAdminResponse(item);
     }
 
     @Override
@@ -160,6 +198,11 @@ public class ItemServiceImpl implements ItemService {
     @Transactional
     public ItemResponse updateItem(UUID itemId, UpdateItemRequest request, String authenticatedUserId) {
         Item item = getOwnedItem(itemId, authenticatedUserId);
+
+        UUID effectiveCategoryId = request.categoryId() == null ? item.getCategoryId() : request.categoryId();
+        Map<String, Object> effectiveSpecifications = request.specifications() == null
+                ? item.getSpecifications() : request.specifications();
+        itemSpecificationValidator.validate(effectiveCategoryId, effectiveSpecifications);
 
         boolean hasImportantChanges = hasImportantChanges(request);
 
@@ -248,12 +291,30 @@ public class ItemServiceImpl implements ItemService {
             throw new InvalidItemOperationException("Item is already approved");
         }
 
+        ItemApprovalStatus previousStatus = item.getApprovalStatus();
+
         item.setApprovalStatus(ItemApprovalStatus.APPROVED);
         item.setApprovedBy(adminId);
         item.setApprovedAt(OffsetDateTime.now());
         item.setRejectionReason(null);
 
         Item updatedItem = itemRepository.save(item);
+
+        adminAuditService.record(
+                AdminAuditAction.ITEM_APPROVED,
+                AdminAuditTargetType.ITEM,
+                updatedItem.getId().toString(),
+                Map.of("approvalStatus", previousStatus.name()),
+                Map.of("approvalStatus", ItemApprovalStatus.APPROVED.name()),
+                null);
+
+        notificationService.notifyUser(
+                updatedItem.getOwnerId(),
+                NotificationType.ITEM,
+                "Listing approved",
+                "Your listing has been approved and is now available.",
+                NotificationReferenceType.ITEM,
+                updatedItem.getId());
 
         return itemMapper.toResponse(updatedItem);
     }
@@ -268,12 +329,30 @@ public class ItemServiceImpl implements ItemService {
             throw new InvalidItemOperationException("Item is already rejected");
         }
 
+        ItemApprovalStatus previousStatus = item.getApprovalStatus();
+
         item.setApprovalStatus(ItemApprovalStatus.REJECTED);
         item.setApprovedBy(adminId);
         item.setApprovedAt(null);
         item.setRejectionReason(reason);
 
         Item updatedItem = itemRepository.save(item);
+
+        adminAuditService.record(
+                AdminAuditAction.ITEM_REJECTED,
+                AdminAuditTargetType.ITEM,
+                updatedItem.getId().toString(),
+                Map.of("approvalStatus", previousStatus.name()),
+                Map.of("approvalStatus", ItemApprovalStatus.REJECTED.name()),
+                reason);
+
+        notificationService.notifyUser(
+                updatedItem.getOwnerId(),
+                NotificationType.ITEM,
+                "Listing rejected",
+                "Your listing was not approved. Please review the reason and update your listing.",
+                NotificationReferenceType.ITEM,
+                updatedItem.getId());
 
         return itemMapper.toResponse(updatedItem);
     }
@@ -284,6 +363,8 @@ public class ItemServiceImpl implements ItemService {
         Item item = itemRepository.findByIdAndDeletedFalse(itemId)
                 .orElseThrow(() -> new ItemNotFoundException(itemId));
 
+        ItemApprovalStatus previousStatus = item.getApprovalStatus();
+
         item.setApprovalStatus(ItemApprovalStatus.REMOVED);
         item.setDeleted(true);
         item.setDeletedAt(OffsetDateTime.now());
@@ -291,6 +372,14 @@ public class ItemServiceImpl implements ItemService {
         item.setStatus(ItemStatus.HIDDEN);
 
         itemRepository.save(item);
+
+        adminAuditService.record(
+                AdminAuditAction.ITEM_REMOVED,
+                AdminAuditTargetType.ITEM,
+                itemId.toString(),
+                Map.of("approvalStatus", previousStatus.name()),
+                Map.of("approvalStatus", ItemApprovalStatus.REMOVED.name()),
+                null);
     }
 
     @Override
@@ -299,12 +388,30 @@ public class ItemServiceImpl implements ItemService {
         Item item = itemRepository.findByIdAndDeletedFalse(itemId)
                 .orElseThrow(() -> new ItemNotFoundException(itemId));
 
+        boolean previousFeatured = item.isFeatured();
+        OffsetDateTime previousFeaturedUntil = item.getFeaturedUntil();
+
         item.setFeatured(featured);
         item.setFeaturedUntil(featured ? featuredUntil : null);
 
         Item updatedItem = itemRepository.save(item);
 
+        adminAuditService.record(
+                featured ? AdminAuditAction.ITEM_FEATURED : AdminAuditAction.ITEM_UNFEATURED,
+                AdminAuditTargetType.ITEM,
+                updatedItem.getId().toString(),
+                mapOf("featured", previousFeatured, "featuredUntil", previousFeaturedUntil),
+                mapOf("featured", updatedItem.isFeatured(), "featuredUntil", updatedItem.getFeaturedUntil()),
+                null);
+
         return itemMapper.toResponse(updatedItem);
+    }
+
+    private static Map<String, Object> mapOf(String key1, Object value1, String key2, Object value2) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put(key1, value1);
+        map.put(key2, value2);
+        return map;
     }
 
     private Item getOwnedItem(UUID itemId, String authenticatedUserId) {

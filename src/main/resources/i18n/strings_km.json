@@ -1,0 +1,58 @@
+{
+  "common.save": "រក្សាទុក",
+  "common.cancel": "បោះបង់",
+  "common.delete": "លុប",
+  "common.edit": "កែសម្រួល",
+  "common.search": "ស្វែងរក",
+  "common.confirm": "បញ្ជាក់",
+  "common.back": "ថយក្រោយ",
+  "common.loading": "កំពុងផ្ទុក...",
+
+  "navigation.dashboard": "ផ្ទាំងគ្រប់គ្រង",
+  "navigation.users": "អ្នកប្រើប្រាស់",
+  "navigation.vendors": "អ្នកផ្តល់សេវា",
+  "navigation.listings": "បញ្ជីទំនិញ",
+  "navigation.bookings": "ការកក់",
+  "navigation.wallet": "កាបូបលុយ",
+  "navigation.advertisements": "ការផ្សាយពាណិជ្ជកម្ម",
+  "navigation.promotions": "ការផ្សព្វផ្សាយ",
+  "navigation.notifications": "ការជូនដំណឹង",
+  "navigation.reports": "របាយការណ៍",
+  "navigation.settings": "ការកំណត់",
+
+  "status.pending": "កំពុងរង់ចាំ",
+  "status.approved": "បានអនុម័ត",
+  "status.rejected": "បានបដិសេធ",
+  "status.active": "សកម្ម",
+  "status.inactive": "អសកម្ម",
+  "status.completed": "បានបញ្ចប់",
+  "status.cancelled": "បានលុបចោល",
+  "status.expired": "ផុតកំណត់",
+  "status.suspended": "បានផ្អាក",
+
+  "wallet.balance": "សមតុល្យ",
+  "wallet.transactions": "ប្រតិបត្តិការ",
+  "wallet.topUp": "បញ្ចូលលុយ",
+
+  "promotion.title": "ការផ្សព្វផ្សាយ",
+  "promotion.package": "កញ្ចប់",
+  "promotion.duration": "រយៈពេល",
+  "promotion.price": "តម្លៃ",
+  "promotion.stats": "ស្ថិតិ",
+  "promotion.impressions": "ចំនួនលេចឡើង",
+  "promotion.clicks": "ចំនួនចុច",
+
+  "advertisement.title": "ការផ្សាយពាណិជ្ជកម្ម",
+  "advertisement.package": "កញ្ចប់",
+  "advertisement.startDate": "ថ្ងៃចាប់ផ្តើម",
+  "advertisement.endDate": "ថ្ងៃបញ្ចប់",
+  "advertisement.quotedPrice": "តម្លៃដែលបានស្នើ",
+
+  "revenue.title": "ចំណូល",
+  "revenue.totalRevenue": "ចំណូលសរុប",
+  "revenue.promotionRevenue": "ចំណូលពីការផ្សព្វផ្សាយ",
+  "revenue.advertisementRevenue": "ចំណូលពីការផ្សាយពាណិជ្ជកម្ម",
+
+  "settings.title": "ការកំណត់",
+  "settings.pricing": "តម្លៃ"
+}

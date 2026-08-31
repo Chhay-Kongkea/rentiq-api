@@ -24,10 +24,11 @@ public class AdminUserController {
 
     @GetMapping
     public Page<AdminUserResponse> listUsers(
+            @RequestParam(required = false) String search,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable
     ) {
-        return adminUserManagementService.listUsers(pageable);
+        return adminUserManagementService.listUsers(search, pageable);
     }
 
     @GetMapping("/{id}")
@@ -38,43 +39,24 @@ public class AdminUserController {
     @PatchMapping("/{id}/suspend")
     public AdminUserStatusResponse suspendUser(
             @PathVariable String id,
-            @Valid @RequestBody(required = false) AdminUserModerationRequest request
+            @Valid @RequestBody AdminUserModerationRequest request
     ) {
-        return adminUserManagementService.suspendUser(
-                id,
-                resolveReason(request, "Suspended by administrator"),
-                AuthUtils.extractUserId()
-        );
+        return adminUserManagementService.suspendUser(id, request.reason(), AuthUtils.extractUserId());
     }
 
     @PatchMapping("/{id}/ban")
     public AdminUserStatusResponse banUser(
             @PathVariable String id,
-            @Valid @RequestBody(required = false) AdminUserModerationRequest request
+            @Valid @RequestBody AdminUserModerationRequest request
     ) {
-        return adminUserManagementService.banUser(
-                id,
-                resolveReason(request, "Banned by administrator"),
-                AuthUtils.extractUserId()
-        );
+        return adminUserManagementService.banUser(id, request.reason(), AuthUtils.extractUserId());
     }
 
     @PatchMapping("/{id}/reinstate")
     public AdminUserStatusResponse reinstateUser(
             @PathVariable String id,
-            @Valid @RequestBody(required = false) AdminUserModerationRequest request
+            @Valid @RequestBody AdminUserModerationRequest request
     ) {
-        return adminUserManagementService.reinstateUser(
-                id,
-                resolveReason(request, "Reinstated by administrator"),
-                AuthUtils.extractUserId()
-        );
-    }
-
-    private String resolveReason(AdminUserModerationRequest request, String fallback) {
-        if (request == null || request.reason() == null || request.reason().isBlank()) {
-            return fallback;
-        }
-        return request.reason().trim();
+        return adminUserManagementService.reinstateUser(id, request.reason(), AuthUtils.extractUserId());
     }
 }

@@ -10,7 +10,7 @@ import java.util.UUID;
 public record ItemRequestResponse(
         UUID id,
         String customerId,
-        Short categoryId,
+        java.util.UUID categoryId,
         String title,
         String description,
         BigDecimal budgetMin,

@@ -8,7 +8,7 @@ import java.time.OffsetDateTime;
 
 public record UpdateItemRequestRequest(
 
-        Short categoryId,
+        java.util.UUID categoryId,
 
         @Size(max = 200)
         String title,

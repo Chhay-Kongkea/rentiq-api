@@ -17,6 +17,8 @@ public record NotificationResponse(
         OffsetDateTime readAt,
         UUID referenceId,
         NotificationReferenceType referenceType,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        NotificationType eventType,
+        NotificationReferenceType eventReferenceType
 ) {
 }

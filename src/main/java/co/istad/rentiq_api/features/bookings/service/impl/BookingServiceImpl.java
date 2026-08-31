@@ -1,6 +1,9 @@
 package co.istad.rentiq_api.features.bookings.service.impl;
 
 
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditAction;
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditTargetType;
+import co.istad.rentiq_api.features.adminAudit.service.AdminAuditService;
 import co.istad.rentiq_api.features.bookings.dto.request.CreateBookingRequest;
 import co.istad.rentiq_api.features.bookings.dto.request.QrScanRequest;
 import co.istad.rentiq_api.features.bookings.dto.request.UpdateBookingStatusRequest;
@@ -49,6 +52,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -70,11 +74,20 @@ BookingServiceImpl implements BookingService {
     private final BookingStatusHistoryMapper historyMapper;
     private final QrCodeGenerator qrCodeGenerator;
     private final BookingDocumentGenerator documentGenerator;
+    private final AdminAuditService adminAuditService;
 
     @Override
     public BookingResponse create(CreateBookingRequest request, String customerId) {
 
-        Item item = resolveItem(request);
+        // Lock the Item row FIRST — every concurrent booking-creation attempt for the same
+        // item serializes here, which is what makes the overlap check below race-free (the
+        // same pattern already used for Promotion purchases). Without this lock, two
+        // concurrent requests could both pass the overlap check before either commits.
+        Item item = resolveItemForUpdate(request);
+
+        if (item.isDeleted()) {
+            throw new ItemNotFoundException(item.getId());
+        }
 
         if (!item.isAvailable()
                 || item.getApprovalStatus() != ItemApprovalStatus.APPROVED
@@ -97,7 +110,7 @@ BookingServiceImpl implements BookingService {
         BigDecimal subtotal = bookedPricePerDay.multiply(BigDecimal.valueOf(rentalDays));
         BigDecimal securityDeposit = item.getDepositAmount() != null ? item.getDepositAmount() : BigDecimal.ZERO;
 
-        BigDecimal commissionRate = categoryRepository.findById((int) item.getCategoryId())
+        BigDecimal commissionRate = categoryRepository.findById(item.getCategoryId())
                 .map(Category::getCommissionRate)
                 .orElse(BigDecimal.ZERO);
         BigDecimal commissionAmount = subtotal.multiply(commissionRate).setScale(2, RoundingMode.HALF_UP);
@@ -118,6 +131,11 @@ BookingServiceImpl implements BookingService {
                 .commissionAmount(commissionAmount)
                 .totalAmount(subtotal.add(securityDeposit))
                 .status(BookingStatus.PENDING)
+                // No payment gateway, checkout, or payment-confirmation event exists yet in
+                // this codebase, so no funds are actually collected or held at creation time.
+                // paymentStatus stays UNPAID until a real payment-confirmation event (e.g. a
+                // checkout/payment-capture endpoint or gateway webhook) is implemented and
+                // explicitly moves it to HELD_IN_ESCROW.
                 .paymentStatus(PaymentStatus.UNPAID)
                 .build();
 
@@ -134,7 +152,14 @@ BookingServiceImpl implements BookingService {
         return mapper.toResponse(saved);
     }
 
-    private Item resolveItem(CreateBookingRequest request) {
+    /**
+     * Resolves the target item id (from the offer or request directly), then locks that Item
+     * row (SELECT ... FOR UPDATE) before returning it. Callers must perform all eligibility/
+     * overlap validation against the RETURNED (locked) entity, not re-fetch it unlocked.
+     */
+    private Item resolveItemForUpdate(CreateBookingRequest request) {
+        UUID itemId;
+
         if (request.offerId() != null) {
             Offer offer = offerRepository.findById(request.offerId())
                     .orElseThrow(() -> new NotFoundException("Offer", request.offerId()));
@@ -143,15 +168,15 @@ BookingServiceImpl implements BookingService {
                 throw new InvalidBookingOperationException("Offer must be accepted before it can be booked");
             }
 
-            return offer.getItem();
-        }
-
-        if (request.itemId() == null) {
+            itemId = offer.getItem().getId();
+        } else if (request.itemId() != null) {
+            itemId = request.itemId();
+        } else {
             throw new InvalidBookingOperationException("Either itemId or offerId is required");
         }
 
-        return itemRepository.findByIdAndDeletedFalse(request.itemId())
-                .orElseThrow(() -> new ItemNotFoundException(request.itemId()));
+        return itemRepository.findByIdForUpdate(itemId)
+                .orElseThrow(() -> new ItemNotFoundException(itemId));
     }
 
     private String generateBookingRef() {
@@ -160,11 +185,8 @@ BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<BookingResponse> findMyBookings(String customerId) {
-        return bookingRepository.findByCustomerIdOrderByCreatedAtDesc(customerId)
-                .stream()
-                .map(mapper::toResponse)
-                .toList();
+    public PageResponse<BookingResponse> findMyBookings(String customerId, Pageable pageable) {
+        return PageResponse.from(bookingRepository.findByCustomerId(customerId, pageable).map(mapper::toResponse));
     }
 
     @Override
@@ -206,6 +228,11 @@ BookingServiceImpl implements BookingService {
             validateTransition(current, target, isCustomer, isOwner);
         } else if (current == target) {
             throw new InvalidBookingOperationException("Booking is already in status " + target);
+        } else if (target == BookingStatus.COMPLETED && current != BookingStatus.RENTED) {
+            // Booking-lifecycle invariant, enforced even for admin overrides: a booking can
+            // only be completed from RENTED. (Rentiq never holds or moves rental money — see
+            // PaymentStatus javadoc — so this is about state-machine integrity, not escrow.)
+            throw new InvalidBookingOperationException("Only a RENTED booking can be completed");
         }
 
         transition(booking, target, callerId, request.reason());
@@ -215,10 +242,24 @@ BookingServiceImpl implements BookingService {
         }
 
         if (target == BookingStatus.COMPLETED) {
+            // Rental payment is P2P (renter pays vendor directly, outside Rentiq), so
+            // completing a booking must NOT credit any wallet or touch paymentStatus.
             booking.setSecurityDepositReturnedAt(OffsetDateTime.now());
         }
 
-        return mapper.toResponse(bookingRepository.save(booking));
+        Booking saved = bookingRepository.save(booking);
+
+        if (isAdmin) {
+            adminAuditService.record(
+                    AdminAuditAction.BOOKING_STATUS_CHANGED,
+                    AdminAuditTargetType.BOOKING,
+                    saved.getId().toString(),
+                    Map.of("status", current.name()),
+                    Map.of("status", target.name()),
+                    request.reason());
+        }
+
+        return mapper.toResponse(saved);
     }
 
     private void validateTransition(BookingStatus current, BookingStatus target,
@@ -279,11 +320,8 @@ BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<BookingResponse> findVendorBookings(String ownerId) {
-        return bookingRepository.findByOwnerIdOrderByCreatedAtDesc(ownerId)
-                .stream()
-                .map(mapper::toResponse)
-                .toList();
+    public PageResponse<BookingResponse> findVendorBookings(String ownerId, Pageable pageable) {
+        return PageResponse.from(bookingRepository.findByOwnerId(ownerId, pageable).map(mapper::toResponse));
     }
 
     @Override

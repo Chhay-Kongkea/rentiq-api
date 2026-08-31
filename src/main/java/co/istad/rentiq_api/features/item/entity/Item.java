@@ -29,7 +29,7 @@ public class Item {
     private String ownerId;
 
     @Column(name = "category_id", nullable = false)
-    private Short categoryId;
+    private UUID categoryId;
 
     @Column(name = "title", nullable = false, length = 200)
     private String title;

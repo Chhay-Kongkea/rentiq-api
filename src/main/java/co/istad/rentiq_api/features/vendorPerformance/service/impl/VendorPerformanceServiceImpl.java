@@ -4,6 +4,9 @@ import co.istad.rentiq_api.common.config.props.KeycloakAdminClientProps;
 import co.istad.rentiq_api.common.exception.ForbiddenException;
 import co.istad.rentiq_api.common.exception.InvalidStateException;
 import co.istad.rentiq_api.common.exception.NotFoundException;
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditAction;
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditTargetType;
+import co.istad.rentiq_api.features.adminAudit.service.AdminAuditService;
 import co.istad.rentiq_api.features.auth.RoleEnum;
 import co.istad.rentiq_api.features.auth.exception.KeycloakOperationException;
 import co.istad.rentiq_api.features.bookings.enums.BookingStatus;
@@ -19,7 +22,6 @@ import co.istad.rentiq_api.features.vendorPerformance.entity.VendorStatusAudit;
 import co.istad.rentiq_api.features.vendorPerformance.enums.VendorModerationAction;
 import co.istad.rentiq_api.features.vendorPerformance.repository.VendorStatusAuditRepository;
 import co.istad.rentiq_api.features.vendorPerformance.service.VendorPerformanceService;
-import co.istad.rentiq_api.features.wallet.repository.WalletTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.UserResource;
@@ -30,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -40,10 +43,10 @@ public class VendorPerformanceServiceImpl implements VendorPerformanceService {
     private final BookingRepository bookingRepository;
     private final BookingStatusHistoryRepository historyRepository;
     private final ReviewRepository reviewRepository;
-    private final WalletTransactionRepository walletTransactionRepository;
     private final VendorStatusAuditRepository auditRepository;
     private final Keycloak keycloak;
     private final KeycloakAdminClientProps keycloakProps;
+    private final AdminAuditService adminAuditService;
 
     @Override
     public VendorPerformanceResponse getPerformance(String ownerId) {
@@ -81,8 +84,11 @@ public class VendorPerformanceServiceImpl implements VendorPerformanceService {
                 ? null
                 : BigDecimal.valueOf(medianResponseSeconds / 60.0).setScale(2, RoundingMode.HALF_UP);
 
-        BigDecimal totalEarnings = walletTransactionRepository.sumBookingEarningsForOwner(ownerId);
-        totalEarnings = totalEarnings == null ? BigDecimal.ZERO : totalEarnings;
+        // Rental GMV arranged through Rentiq for this vendor's completed bookings — computed
+        // directly from Booking, never from the Wallet ledger (rental payment is P2P and never
+        // touches Rentiq; see FIN-004 in the backend audit).
+        BigDecimal completedBookingValue = bookingRepository.sumSubtotalByOwnerIdAndStatus(ownerId, BookingStatus.COMPLETED);
+        completedBookingValue = completedBookingValue == null ? BigDecimal.ZERO : completedBookingValue;
 
         return new VendorPerformanceResponse(
                 ownerId,
@@ -94,7 +100,7 @@ public class VendorPerformanceServiceImpl implements VendorPerformanceService {
                 averageRating,
                 reviewCount,
                 medianResponseTimeMinutes,
-                totalEarnings);
+                completedBookingValue);
     }
 
     @Override
@@ -142,9 +148,12 @@ public class VendorPerformanceServiceImpl implements VendorPerformanceService {
             String adminId,
             boolean revokeSession
     ) {
+        AccountStatus previousStatus = target.getAccountStatus();
+
         target.setAccountStatus(newStatus);
         userRepository.save(target);
 
+        // Feature-specific ledger, kept as-is (VendorPerformanceServiceImpl's own history).
         VendorStatusAudit audit = auditRepository.save(VendorStatusAudit.builder()
                 .adminId(adminId)
                 .targetId(target.getId())
@@ -156,8 +165,25 @@ public class VendorPerformanceServiceImpl implements VendorPerformanceService {
             revokeKeycloakSession(target.getId());
         }
 
+        // Centralized cross-domain audit log, written alongside the existing ledger above.
+        adminAuditService.record(
+                centralAuditActionFor(action),
+                AdminAuditTargetType.VENDOR,
+                target.getId(),
+                Map.of("status", previousStatus.name()),
+                Map.of("status", newStatus.name()),
+                reason);
+
         return new VendorModerationResponse(
                 target.getId(), target.getAccountStatus(), action, reason, adminId, audit.getCreatedAt());
+    }
+
+    private AdminAuditAction centralAuditActionFor(VendorModerationAction action) {
+        return switch (action) {
+            case SUSPEND -> AdminAuditAction.VENDOR_SUSPENDED;
+            case BAN -> AdminAuditAction.VENDOR_BANNED;
+            case REINSTATE -> AdminAuditAction.VENDOR_REINSTATED;
+        };
     }
 
     private User requireTargetForModeration(String targetId, String adminId) {

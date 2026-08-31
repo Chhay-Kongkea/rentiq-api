@@ -11,8 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.UUID;
-
 @Service
 @RequiredArgsConstructor
 public class ImageUploadServiceImpl implements ImageUploadService {
@@ -46,32 +44,6 @@ public class ImageUploadServiceImpl implements ImageUploadService {
         UploadedImage saved = uploadedImageRepository.save(image);
 
         return toResponse(saved);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public ImageUploadResponse getById(UUID id) {
-
-        UploadedImage image = uploadedImageRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("Image not found with id: " + id)
-                );
-
-        return toResponse(image);
-    }
-
-    @Override
-    @Transactional
-    public void delete(UUID id) {
-
-        UploadedImage image = uploadedImageRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("Image not found with id: " + id)
-                );
-
-        imageStorageService.deleteImage(image.getPublicId());
-
-        uploadedImageRepository.delete(image);
     }
 
     private ImageUploadResponse toResponse(UploadedImage image) {

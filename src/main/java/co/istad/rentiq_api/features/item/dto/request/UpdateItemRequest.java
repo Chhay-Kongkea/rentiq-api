@@ -11,7 +11,7 @@ import java.util.Map;
 
 public record UpdateItemRequest(
 
-        Short categoryId,
+        java.util.UUID categoryId,
 
         @Size(min = 3, max = 200, message = "Title must contain between 3 and 200 characters")
         String title,

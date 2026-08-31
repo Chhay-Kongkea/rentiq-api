@@ -2,6 +2,8 @@ package co.istad.rentiq_api.features.notification.entity;
 
 import co.istad.rentiq_api.features.notification.enums.NotificationReferenceType;
 import co.istad.rentiq_api.features.notification.enums.NotificationType;
+import co.istad.rentiq_api.features.notification.NotificationConstraints;
+import co.istad.rentiq_api.features.notification.NotificationPersistenceMapper;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -32,7 +34,7 @@ public class Notification {
     @Column(name = "notification_type", length = 80)
     private NotificationType notificationType;
 
-    @Column(name = "title", nullable = false, length = 20)
+    @Column(name = "title", nullable = false, length = NotificationConstraints.TITLE_MAX_LENGTH)
     private String title;
 
     @Column(name = "body", nullable = false, columnDefinition = "TEXT")
@@ -62,12 +64,27 @@ public class Notification {
 
     @PrePersist
     public void prePersist() {
+        assertPersistenceCompatible();
         if (createdAt == null) {
             createdAt = OffsetDateTime.now();
         }
 
         if (payload == null) {
             payload = new LinkedHashMap<>();
+        }
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        assertPersistenceCompatible();
+    }
+
+    private void assertPersistenceCompatible() {
+        if (notificationType != null && !NotificationPersistenceMapper.isPersistedType(notificationType)) {
+            throw new IllegalStateException("Unsupported persisted notification type: " + notificationType);
+        }
+        if (referenceType != null && !NotificationPersistenceMapper.isPersistedReferenceType(referenceType)) {
+            throw new IllegalStateException("Unsupported persisted notification reference type: " + referenceType);
         }
     }
 

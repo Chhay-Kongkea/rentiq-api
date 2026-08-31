@@ -11,7 +11,7 @@ public record ItemRequestFilter(
 
         String keyword,
 
-        Short categoryId,
+        java.util.UUID categoryId,
 
         @DecimalMin("0.0")
         BigDecimal budgetMin,

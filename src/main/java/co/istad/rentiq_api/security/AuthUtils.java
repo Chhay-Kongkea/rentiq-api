@@ -4,7 +4,6 @@ package co.istad.rentiq_api.security;
 
 
 import org.springframework.http.HttpStatus;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -16,17 +15,7 @@ public final class AuthUtils {
     private AuthUtils() {}
 
     public static String extractUserId() {
-        Authentication auth = getAuth();
-
-        if (auth instanceof AnonymousAuthenticationToken) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You have been forbidden");
-        }
-
-        JwtAuthenticationToken jwtAuthenticationToken = (JwtAuthenticationToken) auth;
-
-        System.out.println(jwtAuthenticationToken);
-
-        return jwtAuthenticationToken.getToken().getSubject();
+        return requireJwt().getToken().getSubject();
     }
 
     public static String extractJwt() {
@@ -57,13 +46,25 @@ public final class AuthUtils {
     }
 
     private static String claim(String claimName) {
+        Object value = requireJwt().getToken().getClaims().get(claimName);
+        return value != null ? value.toString() : null;
+    }
+
+    /**
+     * Every helper in this class expects a bearer-JWT-authenticated principal — this REST API
+     * is bearer-JWT only; the separate browser OAuth2 login flow exists solely to bootstrap the
+     * Keycloak handshake and never reaches these business-identity helpers. Explicitly rejects
+     * anonymous and any other non-JWT Authentication (instead of an unchecked cast that would
+     * surface as an unhandled ClassCastException/500 for an unexpected principal type).
+     */
+    private static JwtAuthenticationToken requireJwt() {
         Authentication auth = getAuth();
-        if (auth instanceof AnonymousAuthenticationToken) {
+
+        if (!(auth instanceof JwtAuthenticationToken jwtAuthenticationToken)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You have been forbidden");
         }
-        JwtAuthenticationToken jwtAuth = (JwtAuthenticationToken) auth;
-        Object value = jwtAuth.getToken().getClaims().get(claimName);
-        return value != null ? value.toString() : null;
+
+        return jwtAuthenticationToken;
     }
 
 }

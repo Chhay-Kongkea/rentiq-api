@@ -9,7 +9,7 @@ import java.time.OffsetDateTime;
 public record CreateItemRequestRequest(
 
         @NotNull(message = "Category is required")
-        Short categoryId,
+        java.util.UUID categoryId,
 
         @NotBlank(message = "Title is required")
         @Size(max = 200)

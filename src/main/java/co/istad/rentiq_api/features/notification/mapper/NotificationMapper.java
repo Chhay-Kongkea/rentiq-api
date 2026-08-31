@@ -1,8 +1,10 @@
 package co.istad.rentiq_api.features.notification.mapper;
 
 import co.istad.rentiq_api.features.notification.dto.request.BroadcastNotificationRequest;
+import co.istad.rentiq_api.features.notification.dto.response.AdminNotificationResponse;
 import co.istad.rentiq_api.features.notification.dto.response.NotificationResponse;
 import co.istad.rentiq_api.features.notification.entity.Notification;
+import co.istad.rentiq_api.features.notification.NotificationPersistenceMapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
@@ -47,9 +49,25 @@ public interface NotificationMapper {
             String userId
     );
 
+    @Mapping(target = "eventType", expression = "java(semanticType(notification))")
+    @Mapping(target = "eventReferenceType", expression = "java(semanticReferenceType(notification))")
     NotificationResponse toResponse(
             Notification notification
     );
+
+    @Mapping(target = "eventType", expression = "java(semanticType(notification))")
+    @Mapping(target = "eventReferenceType", expression = "java(semanticReferenceType(notification))")
+    AdminNotificationResponse toAdminResponse(
+            Notification notification
+    );
+
+    default co.istad.rentiq_api.features.notification.enums.NotificationType semanticType(Notification notification) {
+        return NotificationPersistenceMapper.semanticType(notification);
+    }
+
+    default co.istad.rentiq_api.features.notification.enums.NotificationReferenceType semanticReferenceType(Notification notification) {
+        return NotificationPersistenceMapper.semanticReferenceType(notification);
+    }
 
     @Named("copyPayload")
     default Map<String, Object> copyPayload(

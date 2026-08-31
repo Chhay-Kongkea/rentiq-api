@@ -10,6 +10,8 @@ public interface AdminUserManagementService {
 
     Page<AdminUserResponse> listUsers(Pageable pageable);
 
+    Page<AdminUserResponse> listUsers(String search, Pageable pageable);
+
     AdminUserResponse getUser(String userId);
 
     AdminUserStatusResponse suspendUser(String userId, String reason, String adminId);

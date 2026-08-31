@@ -2,6 +2,8 @@ package co.istad.rentiq_api.features.item.service;
 
 import co.istad.rentiq_api.features.item.dto.request.CreateItemRequest;
 import co.istad.rentiq_api.features.item.dto.request.ItemFilter;
+import co.istad.rentiq_api.features.item.dto.request.AdminItemFilter;
+import co.istad.rentiq_api.features.item.dto.respone.AdminItemResponse;
 import co.istad.rentiq_api.features.item.dto.request.NearbyItemFilter;
 import co.istad.rentiq_api.features.item.dto.request.UpdateItemRequest;
 import co.istad.rentiq_api.features.item.dto.respone.ItemResponse;
@@ -25,6 +27,9 @@ public interface ItemService {
     ItemResponse updateAvailability(UUID itemId, ItemAvailabilityState availability, String authenticatedUserId);
     ItemResponse updateStatus(UUID itemId, ItemStatus status, String authenticatedUserId);
     void softDeleteItem(UUID itemId, String authenticatedUserId);
+
+    PageResponse<AdminItemResponse> getAdminItems(AdminItemFilter filter, int pageNumber, int pageSize, String sortBy, String sortDirection);
+    AdminItemResponse getAdminItemById(UUID itemId);
 
     ItemResponse adminApproveItem(UUID itemId, String adminId);
     ItemResponse adminRejectItem(UUID itemId, String reason, String adminId);

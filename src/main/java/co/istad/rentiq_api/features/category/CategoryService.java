@@ -6,23 +6,24 @@ import co.istad.rentiq_api.features.category.cateogryDto.CategoryResponse;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public interface CategoryService {
     List<CategoryResponse> getAllCategories();
 
-    CategoryResponse getCategoryById(Integer id);
+    CategoryResponse getCategoryById(UUID id);
 
-    List<CategoryResponse> getChildCategories(Integer parentId);
+    List<CategoryResponse> getChildCategories(UUID parentId);
 
-    List<Map<String, Object>> getItemsInCategory(Integer categoryId);
+    List<Map<String, Object>> getItemsInCategory(UUID categoryId);
 
     CategoryResponse createCategory(CategoryRequest request);
 
-    CategoryResponse updateCategory(Integer id, CategoryRequest request);
+    CategoryResponse updateCategory(UUID id, CategoryRequest request);
 
-    void deleteCategory(Integer id);
+    void deleteCategory(UUID id);
 
-    CategoryResponse updateCommissionRate(Integer id, BigDecimal commissionRate);
+    CategoryResponse updateCommissionRate(UUID id, BigDecimal commissionRate);
 
-    CategoryResponse updateStatus(Integer id, Boolean active);
+    CategoryResponse updateStatus(UUID id, Boolean active);
 }

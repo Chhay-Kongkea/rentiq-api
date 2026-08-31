@@ -1,0 +1,58 @@
+{
+  "common.save": "Save",
+  "common.cancel": "Cancel",
+  "common.delete": "Delete",
+  "common.edit": "Edit",
+  "common.search": "Search",
+  "common.confirm": "Confirm",
+  "common.back": "Back",
+  "common.loading": "Loading...",
+
+  "navigation.dashboard": "Dashboard",
+  "navigation.users": "Users",
+  "navigation.vendors": "Vendors",
+  "navigation.listings": "Listings",
+  "navigation.bookings": "Bookings",
+  "navigation.wallet": "Wallet",
+  "navigation.advertisements": "Advertisements",
+  "navigation.promotions": "Promotions",
+  "navigation.notifications": "Notifications",
+  "navigation.reports": "Reports",
+  "navigation.settings": "Settings",
+
+  "status.pending": "Pending",
+  "status.approved": "Approved",
+  "status.rejected": "Rejected",
+  "status.active": "Active",
+  "status.inactive": "Inactive",
+  "status.completed": "Completed",
+  "status.cancelled": "Cancelled",
+  "status.expired": "Expired",
+  "status.suspended": "Suspended",
+
+  "wallet.balance": "Balance",
+  "wallet.transactions": "Transactions",
+  "wallet.topUp": "Top Up",
+
+  "promotion.title": "Promotion",
+  "promotion.package": "Package",
+  "promotion.duration": "Duration",
+  "promotion.price": "Price",
+  "promotion.stats": "Stats",
+  "promotion.impressions": "Impressions",
+  "promotion.clicks": "Clicks",
+
+  "advertisement.title": "Advertisement",
+  "advertisement.package": "Package",
+  "advertisement.startDate": "Start Date",
+  "advertisement.endDate": "End Date",
+  "advertisement.quotedPrice": "Quoted Price",
+
+  "revenue.title": "Revenue",
+  "revenue.totalRevenue": "Total Revenue",
+  "revenue.promotionRevenue": "Promotion Revenue",
+  "revenue.advertisementRevenue": "Advertisement Revenue",
+
+  "settings.title": "Settings",
+  "settings.pricing": "Pricing"
+}

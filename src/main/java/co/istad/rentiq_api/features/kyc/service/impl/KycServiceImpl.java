@@ -1,6 +1,9 @@
 package co.istad.rentiq_api.features.kyc.service.impl;
 
 
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditAction;
+import co.istad.rentiq_api.features.adminAudit.enums.AdminAuditTargetType;
+import co.istad.rentiq_api.features.adminAudit.service.AdminAuditService;
 import co.istad.rentiq_api.features.auth.dto.request.ResendVerificationRequest;
 import co.istad.rentiq_api.features.auth.service.AuthService;
 import co.istad.rentiq_api.features.kyc.KycStatus;
@@ -13,6 +16,9 @@ import co.istad.rentiq_api.features.kyc.mapper.KycMapper;
 import co.istad.rentiq_api.features.kyc.repository.UserKycRepository;
 import co.istad.rentiq_api.features.kyc.service.KycImageStorageService;
 import co.istad.rentiq_api.features.kyc.service.KycService;
+import co.istad.rentiq_api.features.notification.enums.NotificationReferenceType;
+import co.istad.rentiq_api.features.notification.enums.NotificationType;
+import co.istad.rentiq_api.features.notification.service.NotificationService;
 
 import co.istad.rentiq_api.features.wallet.service.WalletService;
 import co.istad.rentiq_api.security.AuthUtils;
@@ -26,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.OffsetDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -38,6 +45,8 @@ public class KycServiceImpl implements KycService {
     private final AuthService authService;
     private final WalletService walletService;
     private final KycMapper kycMapper;
+    private final AdminAuditService adminAuditService;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -211,6 +220,8 @@ public class KycServiceImpl implements KycService {
             throw new InvalidKycStatusException("KYC is already approved");
         }
 
+        String previousStatus = kyc.getVerificationStatus();
+
         kyc.setVerificationStatus(KycStatus.APPROVED.name());
         kyc.setVerifiedAt(OffsetDateTime.now());
         kyc.setReviewedBy(adminId);
@@ -220,6 +231,22 @@ public class KycServiceImpl implements KycService {
         kyc = kycRepository.save(kyc);
 
         walletService.grantWelcomeBonusIfEligible(kyc.getUserId());
+
+        adminAuditService.record(
+                AdminAuditAction.KYC_APPROVED,
+                AdminAuditTargetType.KYC,
+                kyc.getId().toString(),
+                Map.of("status", previousStatus),
+                Map.of("status", KycStatus.APPROVED.name()),
+                null);
+
+        notificationService.notifyUser(
+                kyc.getUserId(),
+                NotificationType.KYC,
+                "KYC approved",
+                "Your identity verification has been approved.",
+                NotificationReferenceType.KYC,
+                kyc.getId());
 
         log.info("KYC {} approved by admin {}", kycId, adminId);
         return kycMapper.toAdminDetailResponse(kyc);
@@ -235,12 +262,30 @@ public class KycServiceImpl implements KycService {
             throw new InvalidKycStatusException("Cannot reject an already approved KYC");
         }
 
+        String previousStatus = kyc.getVerificationStatus();
+
         kyc.setVerificationStatus(KycStatus.REJECTED.name());
         kyc.setRejectionReason(request.reason());
         kyc.setReviewedBy(adminId);
         kyc.setReviewedAt(OffsetDateTime.now());
 
         kyc = kycRepository.save(kyc);
+
+        adminAuditService.record(
+                AdminAuditAction.KYC_REJECTED,
+                AdminAuditTargetType.KYC,
+                kyc.getId().toString(),
+                Map.of("status", previousStatus),
+                Map.of("status", KycStatus.REJECTED.name()),
+                request.reason());
+
+        notificationService.notifyUser(
+                kyc.getUserId(),
+                NotificationType.KYC,
+                "KYC rejected",
+                "Your identity verification was rejected. Please review the reason and resubmit.",
+                NotificationReferenceType.KYC,
+                kyc.getId());
 
         log.info("KYC {} rejected by admin {}", kycId, adminId);
         return kycMapper.toAdminDetailResponse(kyc);

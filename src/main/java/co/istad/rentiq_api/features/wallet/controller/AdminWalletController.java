@@ -1,6 +1,8 @@
 package co.istad.rentiq_api.features.wallet.controller;
 
 import co.istad.rentiq_api.features.wallet.dto.request.AdminWalletAdjustRequest;
+import co.istad.rentiq_api.features.wallet.dto.request.AdminWalletTopupRequest;
+import co.istad.rentiq_api.features.wallet.dto.response.AdminWalletTopupResponse;
 import co.istad.rentiq_api.features.wallet.dto.response.WalletResponse;
 import co.istad.rentiq_api.features.wallet.dto.response.WalletTransactionResponse;
 import co.istad.rentiq_api.features.wallet.service.WalletService;
@@ -48,5 +50,18 @@ public class AdminWalletController {
             @Valid @RequestBody AdminWalletAdjustRequest request
     ) {
         return walletService.adminAdjustWallet(walletId, request, AuthUtils.extractUserId());
+    }
+
+    /**
+     * Vendor paid the admin externally (cash / ABA / KHQR / bank transfer); the admin verifies
+     * that payment and credits the vendor's Rentiq platform-balance wallet here. Distinct from
+     * {@link #adjustWallet} (a manual balance correction, not tied to a real vendor payment).
+     */
+    @PostMapping("/{walletId}/topup")
+    public AdminWalletTopupResponse topupWallet(
+            @PathVariable UUID walletId,
+            @Valid @RequestBody AdminWalletTopupRequest request
+    ) {
+        return walletService.adminTopupWallet(walletId, request, AuthUtils.extractUserId());
     }
 }
