@@ -37,6 +37,8 @@ import co.istad.rentiq_api.common.exception.NotFoundException;
 import co.istad.rentiq_api.features.itemrequest.entity.Offer;
 import co.istad.rentiq_api.features.itemrequest.enums.OfferStatus;
 import co.istad.rentiq_api.features.itemrequest.repository.OfferRepository;
+import co.istad.rentiq_api.features.platformSetting.enums.PlatformSettingKey;
+import co.istad.rentiq_api.features.platformSetting.service.PlatformSettingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -75,6 +77,7 @@ BookingServiceImpl implements BookingService {
     private final QrCodeGenerator qrCodeGenerator;
     private final BookingDocumentGenerator documentGenerator;
     private final AdminAuditService adminAuditService;
+    private final PlatformSettingService platformSettingService;
 
     @Override
     public BookingResponse create(CreateBookingRequest request, String customerId) {
@@ -104,7 +107,12 @@ BookingServiceImpl implements BookingService {
             throw new InvalidBookingOperationException("Item is already booked for the selected dates");
         }
 
-        short rentalDays = (short) ChronoUnit.DAYS.between(request.rentalStart(), request.rentalEnd());
+        long requestedRentalDays = ChronoUnit.DAYS.between(request.rentalStart(), request.rentalEnd());
+        int maximumRentalDays = platformSettingService.getInteger(PlatformSettingKey.BOOKING_MAX_RENTAL_DAYS);
+        if (requestedRentalDays > maximumRentalDays) {
+            throw new InvalidBookingOperationException("Rental duration cannot exceed " + maximumRentalDays + " days");
+        }
+        short rentalDays = (short) requestedRentalDays;
 
         BigDecimal bookedPricePerDay = item.getPricePerDay();
         BigDecimal subtotal = bookedPricePerDay.multiply(BigDecimal.valueOf(rentalDays));

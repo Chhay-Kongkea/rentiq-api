@@ -15,6 +15,8 @@ import co.istad.rentiq_api.features.notification.enums.NotificationReferenceType
 import co.istad.rentiq_api.features.notification.enums.NotificationType;
 import co.istad.rentiq_api.features.notification.mapper.NotificationMapper;
 import co.istad.rentiq_api.features.notification.repository.NotificationRepository;
+import co.istad.rentiq_api.features.platformSetting.enums.PlatformSettingKey;
+import co.istad.rentiq_api.features.platformSetting.service.PlatformSettingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,6 +55,7 @@ class NotificationServiceImplTest {
     @Mock private NotificationRepository notificationRepository;
     @Mock private NotificationMapper notificationMapper;
     @Mock private UserRepository userRepository;
+    @Mock private PlatformSettingService platformSettingService;
 
     private Keycloak keycloak;
     private KeycloakAdminClientProps keycloakProps;
@@ -66,7 +69,10 @@ class NotificationServiceImplTest {
         keycloakProps.setTargetRealm("rentiq");
         service = new NotificationServiceImpl(
                 notificationRepository, notificationMapper, userRepository,
-                keycloak, keycloakProps);
+                keycloak, keycloakProps, platformSettingService);
+        org.mockito.Mockito.lenient().when(
+                platformSettingService.getBoolean(PlatformSettingKey.MARKETING_BROADCAST_ENABLED)
+        ).thenReturn(true);
     }
 
     // ---------------------------------------------------------------
@@ -196,6 +202,31 @@ class NotificationServiceImplTest {
             assertThat(notification.getNotificationType()).isEqualTo(NotificationType.SYSTEM);
             assertThat(notification.getPayload()).containsEntry("eventType", "SYSTEM");
         });
+    }
+
+    @Test
+    void marketingBroadcastIsRejectedWhenDisabled() {
+        when(platformSettingService.getBoolean(PlatformSettingKey.MARKETING_BROADCAST_ENABLED)).thenReturn(false);
+        BroadcastNotificationRequest request = new BroadcastNotificationRequest(
+                BroadcastAudienceType.ALL_USERS, null, NotificationType.MARKETING,
+                "Marketing", "Body", null, null, null);
+
+        assertThatThrownBy(() -> service.broadcast(request))
+                .isInstanceOf(InvalidOperationException.class).hasMessageContaining("disabled");
+        verify(notificationRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void systemBroadcastDoesNotConsultMarketingToggle() {
+        when(keycloak.realm("rentiq").roles().get("USER").getUserMembers(0, 250)).thenReturn(List.of());
+        when(keycloak.realm("rentiq").roles().get("VENDOR").getUserMembers(0, 250)).thenReturn(List.of());
+        when(keycloak.realm("rentiq").roles().get("ADMIN").getUserMembers(0, 250)).thenReturn(List.of());
+        BroadcastNotificationRequest request = new BroadcastNotificationRequest(
+                BroadcastAudienceType.ALL_USERS, null, NotificationType.SYSTEM,
+                "System notice", "Body", null, null, null);
+
+        assertThat(service.broadcast(request).recipientCount()).isZero();
+        verify(platformSettingService, never()).getBoolean(any());
     }
 
     @Test

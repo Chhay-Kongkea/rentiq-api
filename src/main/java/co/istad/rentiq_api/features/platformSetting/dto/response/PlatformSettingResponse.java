@@ -2,8 +2,8 @@ package co.istad.rentiq_api.features.platformSetting.dto.response;
 
 import co.istad.rentiq_api.features.platformSetting.enums.PlatformSettingKey;
 import co.istad.rentiq_api.features.platformSetting.enums.SettingCategory;
+import co.istad.rentiq_api.features.platformSetting.enums.SettingValueType;
 
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 /**
@@ -13,9 +13,13 @@ import java.time.OffsetDateTime;
 public record PlatformSettingResponse(
         PlatformSettingKey key,
         SettingCategory category,
+        SettingValueType type,
+        String label,
+        String description,
         String currency,
-        BigDecimal defaultValue,
-        BigDecimal value,
+        Object defaultValue,
+        Object value,
+        boolean editable,
         boolean overridden,
         String updatedBy,
         OffsetDateTime updatedAt

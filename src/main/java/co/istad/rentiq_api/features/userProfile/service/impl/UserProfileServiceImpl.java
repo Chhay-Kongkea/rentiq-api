@@ -23,6 +23,8 @@ import co.istad.rentiq_api.features.userProfile.service.AvatarStorageService;
 import co.istad.rentiq_api.features.userProfile.service.UserProfileService;
 import co.istad.rentiq_api.features.userProfile.util.GeoUtils;
 import co.istad.rentiq_api.features.localization.enums.SupportedLocale;
+import co.istad.rentiq_api.features.platformSetting.enums.PlatformSettingKey;
+import co.istad.rentiq_api.features.platformSetting.service.PlatformSettingService;
 import co.istad.rentiq_api.security.AuthUtils;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +51,7 @@ public class UserProfileServiceImpl implements UserProfileService {
     private final Keycloak keycloak;
     private final KeycloakAdminClientProps props;
     private final UserProfileMapper userProfileMapper;
+    private final PlatformSettingService platformSettingService;
 
     // ---------------------------------------------------------------
     // PROFILE
@@ -312,7 +315,7 @@ public class UserProfileServiceImpl implements UserProfileService {
                 .orElseGet(() -> userRepository.save(
                         User.builder()
                                 .id(userId)
-                                .locale("en")
+                                .locale(platformSettingService.getString(PlatformSettingKey.DEFAULT_LOCALE))
                                 .accountStatus(AccountStatus.ACTIVE)
                                 .build()
                 ));

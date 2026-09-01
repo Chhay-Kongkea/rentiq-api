@@ -27,8 +27,11 @@ public class PlatformSetting {
     @Column(name = "setting_key", length = 60)
     private PlatformSettingKey key;
 
-    @Column(name = "value", nullable = false, precision = 15, scale = 2)
+    @Column(name = "value", precision = 15, scale = 2)
     private BigDecimal value;
+
+    @Column(name = "text_value", columnDefinition = "TEXT")
+    private String textValue;
 
     @Column(name = "updated_by", length = 255)
     private String updatedBy;

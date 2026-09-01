@@ -16,6 +16,8 @@ import co.istad.rentiq_api.features.item.mapper.ItemImageMapper;
 import co.istad.rentiq_api.features.item.repository.ItemImageRepository;
 import co.istad.rentiq_api.features.item.repository.ItemRepository;
 import co.istad.rentiq_api.features.item.service.ItemImageService;
+import co.istad.rentiq_api.features.platformSetting.enums.PlatformSettingKey;
+import co.istad.rentiq_api.features.platformSetting.service.PlatformSettingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,26 +32,26 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class ItemImageServiceImpl implements ItemImageService {
 
-    private static final int MAX_IMAGES_PER_ITEM = 8;
-
     private final ItemRepository itemRepository;
     private final ItemImageRepository itemImageRepository;
     private final ImageStorageService imageStorageService;
     private final ItemImageMapper itemImageMapper;
+    private final PlatformSettingService platformSettingService;
 
     @Override
     @Transactional
     public List<ItemImageResponse> uploadImages(UUID itemId, List<MultipartFile> files, String authenticatedUserId) {
         Item item = getOwnedItem(itemId ,authenticatedUserId);
-        validateFiles(files);
+        int maximumImages = platformSettingService.getInteger(PlatformSettingKey.LISTING_MAX_IMAGES);
+        validateFiles(files, maximumImages);
 
         long currentImageCount = itemImageRepository.countByItemId(itemId);
 
         if (currentImageCount + files.size()
-                > MAX_IMAGES_PER_ITEM) {
+                > maximumImages) {
             throw new InvalidImageException(
                     "An item can have a maximum of "
-                            + MAX_IMAGES_PER_ITEM
+                            + maximumImages
                             + " images"
             );
         }
@@ -170,17 +172,17 @@ public class ItemImageServiceImpl implements ItemImageService {
                 );
     }
 
-    private void validateFiles(List<MultipartFile> files) {
+    private void validateFiles(List<MultipartFile> files, int maximumImages) {
         if (files == null || files.isEmpty()) {
             throw new InvalidImageException(
                     "At least one image is required"
             );
         }
 
-        if (files.size() > MAX_IMAGES_PER_ITEM) {
+        if (files.size() > maximumImages) {
             throw new InvalidImageException(
                     "You cannot upload more than "
-                            + MAX_IMAGES_PER_ITEM
+                            + maximumImages
                             + " images at once"
             );
         }

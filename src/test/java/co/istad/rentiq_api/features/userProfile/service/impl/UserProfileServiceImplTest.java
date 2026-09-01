@@ -10,6 +10,7 @@ import co.istad.rentiq_api.features.userProfile.mapper.UserProfileMapper;
 import co.istad.rentiq_api.features.userProfile.repository.UserAddressRepository;
 import co.istad.rentiq_api.features.userProfile.repository.UserRepository;
 import co.istad.rentiq_api.features.userProfile.service.AvatarStorageService;
+import co.istad.rentiq_api.features.platformSetting.service.PlatformSettingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,6 +44,7 @@ class UserProfileServiceImplTest {
     @Mock private Keycloak keycloak;
     @Mock private KeycloakAdminClientProps props;
     @Mock private UserProfileMapper userProfileMapper;
+    @Mock private PlatformSettingService platformSettingService;
 
     private UserProfileServiceImpl service;
 
@@ -50,7 +52,7 @@ class UserProfileServiceImplTest {
     void setUp() {
         service = new UserProfileServiceImpl(
                 userRepository, addressRepository, notificationPreferenceRepository,
-                avatarStorageService, keycloak, props, userProfileMapper);
+                avatarStorageService, keycloak, props, userProfileMapper, platformSettingService);
         // getMyProfile() (called at the end of updateMyProfile) reads the JWT via AuthUtils,
         // which requires an authenticated SecurityContext this unit test never sets up — the
         // locale-validation branch under test always runs (and, on rejection, throws) before
