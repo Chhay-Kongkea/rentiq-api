@@ -25,6 +25,8 @@ import co.istad.rentiq_api.features.item.enums.ItemStatus;
 import co.istad.rentiq_api.features.item.exception.ItemNotFoundException;
 import co.istad.rentiq_api.features.item.repository.ItemRepository;
 import co.istad.rentiq_api.features.itemrequest.repository.OfferRepository;
+import co.istad.rentiq_api.features.platformSetting.enums.PlatformSettingKey;
+import co.istad.rentiq_api.features.platformSetting.service.PlatformSettingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -70,6 +72,7 @@ class BookingServiceImplTest {
     @Mock private QrCodeGenerator qrCodeGenerator;
     @Mock private BookingDocumentGenerator documentGenerator;
     @Mock private AdminAuditService adminAuditService;
+    @Mock private PlatformSettingService platformSettingService;
 
     private BookingServiceImpl service;
 
@@ -78,9 +81,10 @@ class BookingServiceImplTest {
         service = new BookingServiceImpl(
                 bookingRepository, historyRepository, qrCodeRepository, itemRepository,
                 offerRepository, categoryRepository, mapper, historyMapper,
-                qrCodeGenerator, documentGenerator, adminAuditService);
+                qrCodeGenerator, documentGenerator, adminAuditService, platformSettingService);
 
         lenient().when(bookingRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(platformSettingService.getInteger(PlatformSettingKey.BOOKING_MAX_RENTAL_DAYS)).thenReturn(30);
     }
 
     private Booking rentedBooking() {
@@ -140,6 +144,31 @@ class BookingServiceImplTest {
         ArgumentCaptor<Booking> captor = ArgumentCaptor.forClass(Booking.class);
         verify(bookingRepository).save(captor.capture());
         assertThat(captor.getValue().getPaymentStatus()).isEqualTo(PaymentStatus.UNPAID);
+    }
+
+    @Test
+    void create_allowsRentalAtConfiguredMaximum() {
+        UUID itemId = UUID.randomUUID();
+        when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(availableItem(itemId)));
+        when(bookingRepository.existsOverlappingBooking(any(), any(), any(), any())).thenReturn(false);
+        when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.empty());
+
+        service.create(new CreateBookingRequest(
+                itemId, null, LocalDate.now().plusDays(1), LocalDate.now().plusDays(31)), CUSTOMER_ID);
+
+        verify(bookingRepository).save(any());
+    }
+
+    @Test
+    void create_rejectsRentalAboveConfiguredMaximum() {
+        UUID itemId = UUID.randomUUID();
+        when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(availableItem(itemId)));
+        when(bookingRepository.existsOverlappingBooking(any(), any(), any(), any())).thenReturn(false);
+
+        assertThatThrownBy(() -> service.create(new CreateBookingRequest(
+                itemId, null, LocalDate.now().plusDays(1), LocalDate.now().plusDays(32)), CUSTOMER_ID))
+                .isInstanceOf(InvalidBookingOperationException.class).hasMessageContaining("30 days");
+        verify(bookingRepository, never()).save(any());
     }
 
     // ---------------------------------------------------------------

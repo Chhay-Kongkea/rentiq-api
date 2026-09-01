@@ -19,6 +19,11 @@ public interface PlatformSettingService {
      */
     BigDecimal getEffectiveValue(PlatformSettingKey key);
 
+    BigDecimal getDecimal(PlatformSettingKey key);
+    int getInteger(PlatformSettingKey key);
+    boolean getBoolean(PlatformSettingKey key);
+    String getString(PlatformSettingKey key);
+
     /**
      * Admin identity always comes from the caller (resolved via AuthUtils at the controller),
      * never accepted in the request body.

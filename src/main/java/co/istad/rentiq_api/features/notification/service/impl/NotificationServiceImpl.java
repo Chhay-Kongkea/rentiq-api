@@ -24,6 +24,8 @@ import co.istad.rentiq_api.features.notification.enums.BroadcastAudienceType;
 import co.istad.rentiq_api.features.userProfile.entity.User;
 import co.istad.rentiq_api.features.userProfile.enums.AccountStatus;
 import co.istad.rentiq_api.features.userProfile.repository.UserRepository;
+import co.istad.rentiq_api.features.platformSetting.enums.PlatformSettingKey;
+import co.istad.rentiq_api.features.platformSetting.service.PlatformSettingService;
 import lombok.RequiredArgsConstructor;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.UserRepresentation;
@@ -59,6 +61,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final UserRepository userRepository;
     private final Keycloak keycloak;
     private final KeycloakAdminClientProps keycloakProps;
+    private final PlatformSettingService platformSettingService;
 
     @Override
     @Transactional
@@ -151,6 +154,10 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public BroadcastNotificationResponse broadcast(BroadcastNotificationRequest request) {
+        if (request.notificationType() == NotificationType.MARKETING
+                && !platformSettingService.getBoolean(PlatformSettingKey.MARKETING_BROADCAST_ENABLED)) {
+            throw new InvalidOperationException("Marketing broadcasts are currently disabled");
+        }
         List<String> recipientIds = request.audienceType() == BroadcastAudienceType.SINGLE_USER
                 ? List.of(requireEligibleSingleRecipient(request.userId()).getId())
                 : resolveAllEligibleRecipientIds();

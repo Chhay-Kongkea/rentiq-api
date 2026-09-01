@@ -50,28 +50,34 @@ class PlatformSettingServiceImplTest {
     // ---------------------------------------------------------------
 
     @Test
-    void getAllSettings_emptyTable_returnsAllTwelveKeysWithDefaults_noneOverridden() {
+    void getAllSettings_emptyTable_returnsCompleteCatalogWithDefaults_noneOverridden() {
         when(platformSettingRepository.findAll()).thenReturn(List.of());
 
         List<PlatformSettingResponse> settings = service.getAllSettings();
 
-        assertThat(settings).hasSize(12);
+        assertThat(settings).hasSize(18);
         assertThat(settings).allMatch(s -> !s.overridden());
-        assertThat(settings).allMatch(s -> s.value().compareTo(s.defaultValue()) == 0);
+        assertThat(settings).allMatch(s -> java.util.Objects.equals(s.value(), s.defaultValue()));
 
-        assertThat(find(settings, PlatformSettingKey.PROMOTION_BOOST_1_DAY_USD).value()).isEqualByComparingTo("1.00");
-        assertThat(find(settings, PlatformSettingKey.PROMOTION_BOOST_1_DAY_KHR).value()).isEqualByComparingTo("4000");
-        assertThat(find(settings, PlatformSettingKey.PROMOTION_BOOST_3_DAYS_USD).value()).isEqualByComparingTo("2.50");
-        assertThat(find(settings, PlatformSettingKey.PROMOTION_BOOST_3_DAYS_KHR).value()).isEqualByComparingTo("10000");
-        assertThat(find(settings, PlatformSettingKey.PROMOTION_BOOST_7_DAYS_USD).value()).isEqualByComparingTo("5.00");
-        assertThat(find(settings, PlatformSettingKey.PROMOTION_BOOST_7_DAYS_KHR).value()).isEqualByComparingTo("20000");
+        assertThat((BigDecimal) find(settings, PlatformSettingKey.PROMOTION_BOOST_1_DAY_USD).value()).isEqualByComparingTo("1.00");
+        assertThat((BigDecimal) find(settings, PlatformSettingKey.PROMOTION_BOOST_1_DAY_KHR).value()).isEqualByComparingTo("4000");
+        assertThat((BigDecimal) find(settings, PlatformSettingKey.PROMOTION_BOOST_3_DAYS_USD).value()).isEqualByComparingTo("2.50");
+        assertThat((BigDecimal) find(settings, PlatformSettingKey.PROMOTION_BOOST_3_DAYS_KHR).value()).isEqualByComparingTo("10000");
+        assertThat((BigDecimal) find(settings, PlatformSettingKey.PROMOTION_BOOST_7_DAYS_USD).value()).isEqualByComparingTo("5.00");
+        assertThat((BigDecimal) find(settings, PlatformSettingKey.PROMOTION_BOOST_7_DAYS_KHR).value()).isEqualByComparingTo("20000");
 
-        assertThat(find(settings, PlatformSettingKey.ADVERTISEMENT_AD_3_DAYS_USD).value()).isEqualByComparingTo("3.00");
-        assertThat(find(settings, PlatformSettingKey.ADVERTISEMENT_AD_3_DAYS_KHR).value()).isEqualByComparingTo("12000");
-        assertThat(find(settings, PlatformSettingKey.ADVERTISEMENT_AD_7_DAYS_USD).value()).isEqualByComparingTo("6.00");
-        assertThat(find(settings, PlatformSettingKey.ADVERTISEMENT_AD_7_DAYS_KHR).value()).isEqualByComparingTo("24000");
-        assertThat(find(settings, PlatformSettingKey.ADVERTISEMENT_AD_14_DAYS_USD).value()).isEqualByComparingTo("10.00");
-        assertThat(find(settings, PlatformSettingKey.ADVERTISEMENT_AD_14_DAYS_KHR).value()).isEqualByComparingTo("40000");
+        assertThat((BigDecimal) find(settings, PlatformSettingKey.ADVERTISEMENT_AD_3_DAYS_USD).value()).isEqualByComparingTo("3.00");
+        assertThat((BigDecimal) find(settings, PlatformSettingKey.ADVERTISEMENT_AD_3_DAYS_KHR).value()).isEqualByComparingTo("12000");
+        assertThat((BigDecimal) find(settings, PlatformSettingKey.ADVERTISEMENT_AD_7_DAYS_USD).value()).isEqualByComparingTo("6.00");
+        assertThat((BigDecimal) find(settings, PlatformSettingKey.ADVERTISEMENT_AD_7_DAYS_KHR).value()).isEqualByComparingTo("24000");
+        assertThat((BigDecimal) find(settings, PlatformSettingKey.ADVERTISEMENT_AD_14_DAYS_USD).value()).isEqualByComparingTo("10.00");
+        assertThat((BigDecimal) find(settings, PlatformSettingKey.ADVERTISEMENT_AD_14_DAYS_KHR).value()).isEqualByComparingTo("40000");
+        assertThat(find(settings, PlatformSettingKey.PLATFORM_DISPLAY_NAME).value()).isEqualTo("Rentiq");
+        assertThat(find(settings, PlatformSettingKey.SUPPORT_EMAIL).value()).isEqualTo("support@rentiq.site");
+        assertThat(find(settings, PlatformSettingKey.DEFAULT_LOCALE).value()).isEqualTo("en");
+        assertThat(find(settings, PlatformSettingKey.BOOKING_MAX_RENTAL_DAYS).value()).isEqualTo(30);
+        assertThat(find(settings, PlatformSettingKey.LISTING_MAX_IMAGES).value()).isEqualTo(8);
+        assertThat(find(settings, PlatformSettingKey.MARKETING_BROADCAST_ENABLED).value()).isEqualTo(true);
     }
 
     @Test
@@ -87,8 +93,8 @@ class PlatformSettingServiceImplTest {
 
         PlatformSettingResponse overridden = find(settings, PlatformSettingKey.PROMOTION_BOOST_7_DAYS_USD);
         assertThat(overridden.overridden()).isTrue();
-        assertThat(overridden.value()).isEqualByComparingTo("6.00");
-        assertThat(overridden.defaultValue()).isEqualByComparingTo("5.00");
+        assertThat((BigDecimal) overridden.value()).isEqualByComparingTo("6.00");
+        assertThat((BigDecimal) overridden.defaultValue()).isEqualByComparingTo("5.00");
         assertThat(overridden.updatedBy()).isEqualTo(ADMIN_ID);
 
         long overriddenCount = settings.stream().filter(PlatformSettingResponse::overridden).count();
@@ -120,7 +126,7 @@ class PlatformSettingServiceImplTest {
         assertThat(response.category()).isEqualTo(SettingCategory.PROMOTION);
         assertThat(response.currency()).isEqualTo("KHR");
         assertThat(response.overridden()).isFalse();
-        assertThat(response.value()).isEqualByComparingTo("4000");
+        assertThat((BigDecimal) response.value()).isEqualByComparingTo("4000");
     }
 
     // ---------------------------------------------------------------
@@ -137,7 +143,7 @@ class PlatformSettingServiceImplTest {
                 new UpdatePlatformSettingRequest(new BigDecimal("6.00"), "Updated platform pricing"),
                 ADMIN_ID);
 
-        assertThat(response.value()).isEqualByComparingTo("6.00");
+        assertThat((BigDecimal) response.value()).isEqualByComparingTo("6.00");
         assertThat(response.overridden()).isTrue();
 
         ArgumentCaptor<PlatformSetting> captor = ArgumentCaptor.forClass(PlatformSetting.class);
@@ -243,7 +249,7 @@ class PlatformSettingServiceImplTest {
         verify(platformSettingRepository).delete(existing);
         verify(platformSettingRepository, never()).save(any());
         assertThat(response.overridden()).isFalse();
-        assertThat(response.value()).isEqualByComparingTo("5.00");
+        assertThat((BigDecimal) response.value()).isEqualByComparingTo("5.00");
     }
 
     @Test
@@ -257,6 +263,78 @@ class PlatformSettingServiceImplTest {
                 new UpdatePlatformSettingRequest(new BigDecimal("6.00"), "reason"), ADMIN_ID);
 
         verify(platformSettingRepository).findByKeyForUpdate(PlatformSettingKey.PROMOTION_BOOST_7_DAYS_USD);
+    }
+
+    @Test
+    void textSettingsPersistOnlyTextValueAndValidateGeneralFields() {
+        when(platformSettingRepository.findByKeyForUpdate(any())).thenReturn(Optional.empty());
+        when(platformSettingRepository.findById(any())).thenReturn(Optional.empty());
+
+        service.update(PlatformSettingKey.PLATFORM_DISPLAY_NAME,
+                new UpdatePlatformSettingRequest("Rentiq Marketplace", "Brand update"), ADMIN_ID);
+        service.update(PlatformSettingKey.SUPPORT_EMAIL,
+                new UpdatePlatformSettingRequest("help@rentiq.site", "Contact update"), ADMIN_ID);
+        service.update(PlatformSettingKey.DEFAULT_LOCALE,
+                new UpdatePlatformSettingRequest("KM", "Locale update"), ADMIN_ID);
+
+        ArgumentCaptor<PlatformSetting> captor = ArgumentCaptor.forClass(PlatformSetting.class);
+        verify(platformSettingRepository, org.mockito.Mockito.times(3)).save(captor.capture());
+        assertThat(captor.getAllValues()).allMatch(setting -> setting.getValue() == null);
+        assertThat(captor.getAllValues()).extracting(PlatformSetting::getTextValue)
+                .containsExactly("Rentiq Marketplace", "help@rentiq.site", "km");
+
+        assertThatThrownBy(() -> update(PlatformSettingKey.SUPPORT_EMAIL, "invalid-email"))
+                .isInstanceOf(InvalidOperationException.class);
+        assertThatThrownBy(() -> update(PlatformSettingKey.DEFAULT_LOCALE, "fr"))
+                .isInstanceOf(InvalidOperationException.class);
+    }
+
+    @Test
+    void integerSettingsAcceptBoundedWholeNumbersAndRejectInvalidValues() {
+        when(platformSettingRepository.findByKeyForUpdate(any())).thenReturn(Optional.empty());
+        when(platformSettingRepository.findById(any())).thenReturn(Optional.empty());
+
+        service.update(PlatformSettingKey.BOOKING_MAX_RENTAL_DAYS,
+                new UpdatePlatformSettingRequest(new BigDecimal("60"), "Policy"), ADMIN_ID);
+        service.update(PlatformSettingKey.LISTING_MAX_IMAGES,
+                new UpdatePlatformSettingRequest(new BigDecimal("10"), "Policy"), ADMIN_ID);
+
+        assertThatThrownBy(() -> update(PlatformSettingKey.BOOKING_MAX_RENTAL_DAYS, BigDecimal.ZERO))
+                .isInstanceOf(InvalidOperationException.class);
+        assertThatThrownBy(() -> update(PlatformSettingKey.LISTING_MAX_IMAGES, new BigDecimal("-1")))
+                .isInstanceOf(InvalidOperationException.class);
+        assertThatThrownBy(() -> update(PlatformSettingKey.LISTING_MAX_IMAGES, new BigDecimal("8.5")))
+                .isInstanceOf(InvalidOperationException.class);
+    }
+
+    @Test
+    void booleanSettingAcceptsZeroOneAndBooleanButRejectsOtherNumbers() {
+        when(platformSettingRepository.findByKeyForUpdate(any())).thenReturn(Optional.empty());
+        when(platformSettingRepository.findById(any())).thenReturn(Optional.empty());
+
+        service.update(PlatformSettingKey.MARKETING_BROADCAST_ENABLED,
+                new UpdatePlatformSettingRequest(BigDecimal.ZERO, "Disable"), ADMIN_ID);
+        service.update(PlatformSettingKey.MARKETING_BROADCAST_ENABLED,
+                new UpdatePlatformSettingRequest(true, "Enable"), ADMIN_ID);
+        assertThatThrownBy(() -> update(PlatformSettingKey.MARKETING_BROADCAST_ENABLED, new BigDecimal("2")))
+                .isInstanceOf(InvalidOperationException.class);
+    }
+
+    @Test
+    void typedAccessorsReadCorrectRepresentations() {
+        when(platformSettingRepository.findById(PlatformSettingKey.LISTING_MAX_IMAGES)).thenReturn(Optional.empty());
+        when(platformSettingRepository.findById(PlatformSettingKey.MARKETING_BROADCAST_ENABLED))
+                .thenReturn(Optional.of(PlatformSetting.builder().value(BigDecimal.ZERO).build()));
+        when(platformSettingRepository.findById(PlatformSettingKey.DEFAULT_LOCALE))
+                .thenReturn(Optional.of(PlatformSetting.builder().textValue("km").build()));
+
+        assertThat(service.getInteger(PlatformSettingKey.LISTING_MAX_IMAGES)).isEqualTo(8);
+        assertThat(service.getBoolean(PlatformSettingKey.MARKETING_BROADCAST_ENABLED)).isFalse();
+        assertThat(service.getString(PlatformSettingKey.DEFAULT_LOCALE)).isEqualTo("km");
+    }
+
+    private void update(PlatformSettingKey key, Object value) {
+        service.update(key, new UpdatePlatformSettingRequest(value, "Policy update"), ADMIN_ID);
     }
 
     private PlatformSettingResponse find(List<PlatformSettingResponse> settings, PlatformSettingKey key) {
