@@ -35,9 +35,12 @@ public class Category extends BasedEntity {
     @Column(unique = true)
     private String slug;
 
-    @Column(name = "commission_rate", precision = 5, scale = 4)
-    private BigDecimal commissionRate = new BigDecimal("0.1000");
-
+    @Column(
+            name = "commission_rate",
+            precision = 5,
+            scale = 2
+    )
+    private BigDecimal commissionRate = new BigDecimal("10.00");
     @Column(name = "icon_url")
     private String iconUrl;
 

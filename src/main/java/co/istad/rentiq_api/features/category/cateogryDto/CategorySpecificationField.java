@@ -1,6 +1,7 @@
 package co.istad.rentiq_api.features.category.cateogryDto;
 
 import co.istad.rentiq_api.features.category.enums.SpecificationFieldType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -34,6 +35,7 @@ public record CategorySpecificationField(
         options = options == null ? List.of() : options.stream().map(String::trim).toList();
     }
 
+    @JsonIgnore
     @AssertTrue(message = "SELECT specification fields require unique options; other field types cannot define options")
     public boolean isOptionsValid() {
         if (type == null) {
