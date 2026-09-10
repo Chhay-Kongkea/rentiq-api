@@ -19,6 +19,7 @@ import co.istad.rentiq_api.features.wallet.enums.WalletStatus;
 import co.istad.rentiq_api.features.wallet.exception.WalletException;
 import co.istad.rentiq_api.features.wallet.mapper.WalletMapper;
 import co.istad.rentiq_api.features.wallet.repository.OwnerWalletRepository;
+import co.istad.rentiq_api.features.wallet.repository.TopupRequestRepository;
 import co.istad.rentiq_api.features.wallet.repository.WalletTransactionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,6 +49,7 @@ class WalletServiceImplTest {
 
     @Mock private OwnerWalletRepository walletRepository;
     @Mock private WalletTransactionRepository transactionRepository;
+    @Mock private TopupRequestRepository topupRequestRepository;
     @Mock private WalletMapper walletMapper;
     @Mock private AdminAuditService adminAuditService;
     @Mock private VendorApplicationRepository vendorApplicationRepository;
@@ -58,7 +60,7 @@ class WalletServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new WalletServiceImpl(
-                walletRepository, transactionRepository, walletMapper,
+                walletRepository, transactionRepository, topupRequestRepository, walletMapper,
                 adminAuditService, vendorApplicationRepository, notificationService);
 
         lenient().when(transactionRepository.save(any(WalletTransaction.class))).thenAnswer(invocation -> {
@@ -257,13 +259,65 @@ class WalletServiceImplTest {
     }
 
     // ---------------------------------------------------------------
-    // Legacy top-up flow removed (backend audit SEC-001/BUS-001) — WalletServiceImpl no
-    // longer has createTopupRequest/getTopupRequests/getTopupRequest/processTopupWebhook/
-    // adminListTopupRequests/adminConfirmTopup at all. Their absence is proven structurally:
-    // this test class compiles against the full WalletService contract (see the constructor
-    // call above) with none of those methods available to call. adminTopupWallet (tested
-    // above) is the only method in WalletService capable of producing a TOP_UP/IN ledger row.
+    // Vendor top-up request (request-only: records a PENDING row, never credits).
+    // The dangerous part of the legacy flow (backend audit SEC-001/BUS-001) was its
+    // forgeable public confirmation webhook — there is no webhook here, and adminTopupWallet
+    // (tested above) is still the only method that can produce a TOP_UP/IN ledger row.
     // ---------------------------------------------------------------
+
+    @Test
+    void createTopupRequest_recordsPendingRequest_withoutTouchingBalance() {
+        UUID walletId = UUID.randomUUID();
+        OwnerWallet wallet = wallet(walletId, "USD", new BigDecimal("10.00"));
+        when(walletRepository.findByOwnerId(OWNER_ID)).thenReturn(Optional.of(wallet));
+        when(topupRequestRepository.save(any(co.istad.rentiq_api.features.wallet.entity.TopupRequest.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.createTopupRequest(OWNER_ID,
+                new co.istad.rentiq_api.features.wallet.dto.request.CreateTopupRequestRequest(
+                        new BigDecimal("25.00"), "ABA", "aba-txn-1"));
+
+        org.mockito.ArgumentCaptor<co.istad.rentiq_api.features.wallet.entity.TopupRequest> captor =
+                org.mockito.ArgumentCaptor.forClass(co.istad.rentiq_api.features.wallet.entity.TopupRequest.class);
+        verify(topupRequestRepository).save(captor.capture());
+        co.istad.rentiq_api.features.wallet.entity.TopupRequest saved = captor.getValue();
+        assertThat(saved.getWalletId()).isEqualTo(walletId);
+        assertThat(saved.getAmount()).isEqualByComparingTo("25.00");
+        assertThat(saved.getPaymentMethod()).isEqualTo("ABA");
+        assertThat(saved.getBankReference()).isEqualTo("aba-txn-1");
+        assertThat(saved.getStatus())
+                .isEqualTo(co.istad.rentiq_api.features.wallet.enums.TopupStatus.PENDING);
+
+        assertThat(wallet.getBalance()).isEqualByComparingTo("10.00");
+        verify(transactionRepository, never()).save(any());
+    }
+
+    @Test
+    void createTopupRequest_rejectsDuplicateBankReference() {
+        UUID walletId = UUID.randomUUID();
+        OwnerWallet wallet = wallet(walletId, "USD", BigDecimal.ZERO);
+        when(walletRepository.findByOwnerId(OWNER_ID)).thenReturn(Optional.of(wallet));
+        when(topupRequestRepository.existsByBankReference("dup-ref")).thenReturn(true);
+
+        assertThatThrownBy(() -> service.createTopupRequest(OWNER_ID,
+                new co.istad.rentiq_api.features.wallet.dto.request.CreateTopupRequestRequest(
+                        new BigDecimal("5.00"), null, "dup-ref")))
+                .isInstanceOf(WalletException.class);
+
+        verify(topupRequestRepository, never()).save(any());
+    }
+
+    @Test
+    void createTopupRequest_rejectsWhenVendorHasNoWallet() {
+        when(walletRepository.findByOwnerId(OWNER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.createTopupRequest(OWNER_ID,
+                new co.istad.rentiq_api.features.wallet.dto.request.CreateTopupRequestRequest(
+                        new BigDecimal("5.00"), null, null)))
+                .isInstanceOf(WalletException.class);
+
+        verify(topupRequestRepository, never()).save(any());
+    }
 
     // ---------------------------------------------------------------
     // Promotion charge

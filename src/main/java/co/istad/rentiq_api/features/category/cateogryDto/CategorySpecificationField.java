@@ -3,6 +3,7 @@ package co.istad.rentiq_api.features.category.cateogryDto;
 import co.istad.rentiq_api.features.category.enums.SpecificationFieldType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

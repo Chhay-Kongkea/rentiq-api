@@ -31,6 +31,11 @@ public class WalletException extends RuntimeException {
         return new WalletException(HttpStatus.NOT_FOUND, "Wallet transaction not found with ID: " + transactionId);
     }
 
+    public static WalletException duplicateBankReference(String bankReference) {
+        return new WalletException(HttpStatus.CONFLICT,
+                "A top-up request with bank reference '" + bankReference + "' already exists");
+    }
+
     public static WalletException invalidAmount() {
         return new WalletException(HttpStatus.BAD_REQUEST, "Amount must be greater than zero");
     }

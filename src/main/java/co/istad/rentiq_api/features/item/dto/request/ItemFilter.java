@@ -6,6 +6,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 public record ItemFilter(
 
@@ -18,7 +19,7 @@ public record ItemFilter(
         @DecimalMin(value = "0.00", message = "Maximum price cannot be negative")
         BigDecimal maxPrice,
 
-        java.util.UUID categoryId,
+        UUID categoryId,
         ItemCondition condition,
         Boolean available,
         Boolean featured,
