@@ -69,7 +69,7 @@ public class AdminFinancialReportController {
 
         String adminId = AuthUtils.extractUserId();
         log.info("Admin {} exported revenue report PDF (from={}, to={}, groupBy={})", adminId, from, to, groupBy);
-        String filename = "revenue-report-" + from + "_to_" + (to != null ? to : LocalDate.now()) + ".pdf";
+        String filename = "rentiq-financial-report-" + from + "-to-" + (to != null ? to : LocalDate.now()) + ".pdf";
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
@@ -87,7 +87,7 @@ public class AdminFinancialReportController {
         String adminId = AuthUtils.extractUserId();
         log.info("Admin {} exported revenue report xlsx (from={}, to={}, groupBy={})", adminId, from, to, groupBy);
 
-        String filename = "revenue-report-" + from + "_to_" + (to != null ? to : LocalDate.now()) + ".xlsx";
+        String filename = "rentiq-financial-report-" + from + "-to-" + (to != null ? to : LocalDate.now()) + ".xlsx";
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")

@@ -8,8 +8,6 @@ import org.mapstruct.MappingConstants;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface AdvertisementMapper {
-
     AdvertisementResponse toResponse(Advertisement advertisement);
-
     PublicAdvertisementResponse toPublicResponse(Advertisement advertisement);
 }

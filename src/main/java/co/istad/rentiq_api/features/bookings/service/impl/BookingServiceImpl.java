@@ -26,6 +26,7 @@ import co.istad.rentiq_api.features.bookings.repository.BookingQrCodeRepository;
 import co.istad.rentiq_api.features.bookings.repository.BookingRepository;
 import co.istad.rentiq_api.features.bookings.repository.BookingStatusHistoryRepository;
 import co.istad.rentiq_api.features.bookings.service.BookingService;
+import co.istad.rentiq_api.features.bookings.validation.BookingTransitionValidator;
 import co.istad.rentiq_api.features.category.Category;
 import co.istad.rentiq_api.features.category.CategoryRepository;
 import co.istad.rentiq_api.features.item.entity.Item;
@@ -78,6 +79,7 @@ BookingServiceImpl implements BookingService {
     private final BookingDocumentGenerator documentGenerator;
     private final AdminAuditService adminAuditService;
     private final PlatformSettingService platformSettingService;
+    private final BookingTransitionValidator transitionValidator;
 
     @Override
     public BookingResponse create(CreateBookingRequest request, String customerId) {
@@ -232,15 +234,17 @@ BookingServiceImpl implements BookingService {
             throw new BookingAccessDeniedException();
         }
 
+        // Backend audit P0-4 — Admin and every normal caller are checked against the exact
+        // same base state machine. Admin is exempt only from the "must be the specific
+        // customer/owner" check below, never from this topology check: elevated authority
+        // means Admin doesn't need to BE the owner to approve/reject/complete, or the customer
+        // to cancel — it does not mean Admin can force an illegal jump (e.g. PENDING straight
+        // to COMPLETED, or out of a terminal state). There is currently no separately-modeled
+        // Admin override that widens this further.
+        transitionValidator.assertReachableViaStatusEndpoint(current, target);
+
         if (!isAdmin) {
-            validateTransition(current, target, isCustomer, isOwner);
-        } else if (current == target) {
-            throw new InvalidBookingOperationException("Booking is already in status " + target);
-        } else if (target == BookingStatus.COMPLETED && current != BookingStatus.RENTED) {
-            // Booking-lifecycle invariant, enforced even for admin overrides: a booking can
-            // only be completed from RENTED. (Rentiq never holds or moves rental money — see
-            // PaymentStatus javadoc — so this is about state-machine integrity, not escrow.)
-            throw new InvalidBookingOperationException("Only a RENTED booking can be completed");
+            requireAuthorizedActor(current, target, isCustomer, isOwner);
         }
 
         transition(booking, target, callerId, request.reason());
@@ -270,8 +274,14 @@ BookingServiceImpl implements BookingService {
         return mapper.toResponse(saved);
     }
 
-    private void validateTransition(BookingStatus current, BookingStatus target,
-                                     boolean isCustomer, boolean isOwner) {
+    /**
+     * Role gating ONLY — the base state machine (which edges even exist) has already been
+     * enforced by {@link BookingTransitionValidator} before this runs. This decides WHO among
+     * a non-admin caller may trigger an already-legal edge; Admin skips this entirely (it's
+     * exempt from having to be the specific customer/owner, per {@link #updateStatus}).
+     */
+    private void requireAuthorizedActor(BookingStatus current, BookingStatus target,
+                                         boolean isCustomer, boolean isOwner) {
 
         switch (current) {
             case PENDING -> {
@@ -279,37 +289,24 @@ BookingServiceImpl implements BookingService {
                     if (!isOwner) {
                         throw new BookingAccessDeniedException("Only the vendor can approve or reject a booking");
                     }
-                } else if (target == BookingStatus.CANCELLED) {
-                    if (!isCustomer) {
-                        throw new BookingAccessDeniedException("Only the customer can cancel a booking");
-                    }
-                } else {
-                    throw new InvalidBookingOperationException("Cannot transition from PENDING to " + target);
+                } else if (target == BookingStatus.CANCELLED && !isCustomer) {
+                    throw new BookingAccessDeniedException("Only the customer can cancel a booking");
                 }
             }
             case APPROVED -> {
-                if (target == BookingStatus.CANCELLED) {
-                    if (!isCustomer) {
-                        throw new BookingAccessDeniedException("Only the customer can cancel a booking");
-                    }
-                } else if (target == BookingStatus.RENTED) {
-                    throw new InvalidBookingOperationException(
-                            "Use the pickup QR code scan to mark a booking as picked up");
-                } else {
-                    throw new InvalidBookingOperationException("Cannot transition from APPROVED to " + target);
+                if (target == BookingStatus.CANCELLED && !isCustomer) {
+                    throw new BookingAccessDeniedException("Only the customer can cancel a booking");
                 }
             }
             case RENTED -> {
-                if (target == BookingStatus.COMPLETED) {
-                    if (!isOwner) {
-                        throw new BookingAccessDeniedException("Only the vendor can complete a booking");
-                    }
-                } else {
-                    throw new InvalidBookingOperationException("Cannot transition from RENTED to " + target);
+                if (target == BookingStatus.COMPLETED && !isOwner) {
+                    throw new BookingAccessDeniedException("Only the vendor can complete a booking");
                 }
             }
-            default -> throw new InvalidBookingOperationException(
-                    "Cannot change status of a booking in " + current + " state");
+            default -> {
+                // Unreachable: BookingTransitionValidator already rejected any edge out of a
+                // terminal state before this method is called.
+            }
         }
     }
 

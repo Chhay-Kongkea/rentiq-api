@@ -8,12 +8,6 @@ import jakarta.validation.constraints.Size;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
-
-/**
- * Deliberately excludes price, currency, durationDays, endAt, status, and vendorId — those are
- * always backend-derived (see AdvertisementPackage / AdvertisementServiceImpl.create), never
- * accepted from the client.
- */
 public record CreateAdvertisementRequest(
 
         @NotNull

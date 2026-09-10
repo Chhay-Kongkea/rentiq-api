@@ -13,25 +13,14 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 public interface AdvertisementService {
-
     AdvertisementResponse create(CreateAdvertisementRequest request, String vendorId);
-
     AdvertisementResponse update(UUID id, UpdateAdvertisementRequest request, String vendorId);
-
     void cancel(UUID id, String vendorId);
-
     Page<AdvertisementResponse> getMyAdvertisements(String vendorId, AdvertisementStatus status, Pageable pageable);
-
     Page<PublicAdvertisementResponse> getPublicAdvertisements(UUID itemId, Pageable pageable);
-
     PublicAdvertisementResponse getPublicAdvertisement(UUID id);
-
-    Page<AdvertisementResponse> adminList(
-            AdvertisementStatus status, String vendorId, LocalDate from, LocalDate to, Pageable pageable);
-
+    Page<AdvertisementResponse> adminList(AdvertisementStatus status, String vendorId, LocalDate from, LocalDate to, Pageable pageable);
     AdvertisementResponse adminApprove(UUID id, String adminId);
-
     AdvertisementResponse adminReject(UUID id, RejectAdvertisementRequest request, String adminId);
-
     AdvertisementResponse adminExpire(UUID id, String adminId);
 }

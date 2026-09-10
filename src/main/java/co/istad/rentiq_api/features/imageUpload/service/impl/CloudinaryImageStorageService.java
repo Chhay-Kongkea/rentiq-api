@@ -4,6 +4,7 @@ import co.istad.rentiq_api.features.imageUpload.dto.StoredImage;
 import co.istad.rentiq_api.features.imageUpload.exception.ImageStorageException;
 import co.istad.rentiq_api.features.imageUpload.exception.InvalidImageException;
 import co.istad.rentiq_api.features.imageUpload.service.ImageStorageService;
+import co.istad.rentiq_api.features.imageUpload.validation.ImageContentValidator;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CloudinaryImageStorageService implements ImageStorageService {
 
+    private static final long MAX_FILE_SIZE_BYTES = 10L * 1024 * 1024; // 10MB
+
     private final Cloudinary cloudinary;
+    private final ImageContentValidator imageContentValidator;
 
     @Override
     public StoredImage uploadImage(
@@ -101,29 +105,11 @@ public class CloudinaryImageStorageService implements ImageStorageService {
     }
 
     private void validateImage(MultipartFile file) {
-
-        if (file == null || file.isEmpty()) {
-            throw new InvalidImageException(
-                    "Image file is required"
-            );
-        }
-
-        String contentType = file.getContentType();
-
-        if (contentType == null ||
-                !contentType.startsWith("image/")) {
-
-            throw new InvalidImageException(
-                    "Only image files are allowed"
-            );
-        }
-
-        long maxSize = 10 * 1024 * 1024;
-
-        if (file.getSize() > maxSize) {
-            throw new InvalidImageException(
-                    "Image size must not exceed 10MB"
-            );
-        }
+        imageContentValidator.validate(
+                file,
+                ImageContentValidator.RASTER_IMAGE_TYPES,
+                MAX_FILE_SIZE_BYTES,
+                InvalidImageException::new
+        );
     }
 }

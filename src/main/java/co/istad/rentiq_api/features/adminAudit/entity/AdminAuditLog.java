@@ -11,11 +11,6 @@ import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Centralized, append-only record of successful admin actions. Never written to directly by
- * controllers — only AdminAuditServiceImpl persists rows, always after the business mutation
- * it describes has already succeeded.
- */
 @Entity
 @Table(
         name = "admin_audit_logs",
@@ -50,8 +45,6 @@ public class AdminAuditLog {
     @Column(name = "target_type", nullable = false, length = 30)
     private AdminAuditPersistedTargetType targetType;
 
-    // String rather than UUID: target ids span a User's Keycloak subject id (String),
-    // JPA-entity UUIDs (VendorApplication, Item, Booking, ...), and a Category's Integer id.
     @Column(name = "target_id", nullable = false, length = 255)
     private String targetId;
 

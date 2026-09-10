@@ -105,12 +105,6 @@ public class AdminAuditServiceImpl implements AdminAuditService {
                 .orElseThrow(() -> new NotFoundException("Admin audit log", id));
     }
 
-    /**
-     * Converts an explicit snapshot (e.g. Map.of("status", ...)) into the plain Map the entity
-     * stores as jsonb. Never pass full JPA entities here — see AdminAuditService's javadoc.
-     * Falls back to an empty snapshot rather than letting a serialization problem roll back the
-     * business mutation the caller already completed.
-     */
     private Map<String, Object> toSnapshot(Object value) {
         if (value == null) {
             return null;

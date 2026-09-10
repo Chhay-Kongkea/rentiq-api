@@ -10,12 +10,6 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 public interface AdminAuditService {
-
-    /**
-     * Resolves the authenticated admin internally (never trusts a caller-supplied admin id),
-     * serializes oldValue/newValue as small, explicit snapshots (e.g. Map.of("status", ...)),
-     * and persists one audit row. Call only after the business mutation has already succeeded.
-     */
     void record(
             AdminAuditAction action,
             AdminAuditTargetType targetType,

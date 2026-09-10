@@ -1,6 +1,7 @@
 package co.istad.rentiq_api.features;
 
 import co.istad.rentiq_api.common.dto.ApiErrorResponse;
+import co.istad.rentiq_api.features.bookings.exception.InvalidBookingOperationException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.catalina.connector.ClientAbortException;
 import org.junit.jupiter.api.BeforeEach;
@@ -71,6 +72,21 @@ class GlobalExceptionHandlerTest {
 
         assertThat(annotation.value()).containsExactlyInAnyOrder(
                 AsyncRequestNotUsableException.class, ClientAbortException.class);
+    }
+
+    @Test
+    void handleInvalidBookingOperation_returns409Conflict() {
+        // Backend audit P0-4, requirement #3 — invalid booking transitions (thrown by
+        // BookingTransitionValidator) must surface as 409 Conflict, not the generic 500 this
+        // exception type fell through to before a dedicated handler existed.
+        InvalidBookingOperationException exception =
+                new InvalidBookingOperationException("Cannot transition booking from PENDING to COMPLETED");
+
+        ApiErrorResponse response = handler.handleInvalidBookingOperation(exception, request);
+
+        assertThat(response.status()).isEqualTo(409);
+        assertThat(response.code()).isEqualTo("INVALID_BOOKING_OPERATION");
+        assertThat(response.message()).isEqualTo("Cannot transition booking from PENDING to COMPLETED");
     }
 
     @Test

@@ -9,6 +9,7 @@ import co.istad.rentiq_api.common.exception.NotFoundException;
 import co.istad.rentiq_api.common.exception.StorageException;
 
 import co.istad.rentiq_api.features.auth.exception.AuthException;
+import co.istad.rentiq_api.features.bookings.exception.InvalidBookingOperationException;
 import co.istad.rentiq_api.features.category.exception.CategoryNotFoundException;
 import co.istad.rentiq_api.features.category.exception.DuplicateCategoryException;
 import co.istad.rentiq_api.features.item.exception.*;
@@ -117,6 +118,27 @@ public class GlobalExceptionHandler {
                 exception.getMessage(),
                 request.getRequestURI(),
                 exception.getDetails()
+        );
+    }
+
+
+    /**
+     * Backend audit P0-4 — previously unmapped, so every invalid booking status transition
+     * (and every other booking business-rule violation using this exception) fell through to
+     * the generic 500 handler below instead of a proper 409. This is what actually delivers
+     * "invalid transitions return 409 Conflict" to the client; BookingTransitionValidator
+     * throws this exception type.
+     */
+    @ExceptionHandler(InvalidBookingOperationException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiErrorResponse handleInvalidBookingOperation(InvalidBookingOperationException exception, HttpServletRequest request) {
+        return ApiErrorResponse.of(
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.getReasonPhrase(),
+                "INVALID_BOOKING_OPERATION",
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
         );
     }
 

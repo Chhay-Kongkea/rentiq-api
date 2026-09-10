@@ -1,9 +1,4 @@
 package co.istad.rentiq_api.features.adminAudit.enums;
-
-/**
- * Only actions with a corresponding, already-implemented admin mutation are listed here —
- * this enum is not a roadmap of future admin operations.
- */
 public enum AdminAuditAction {
     USER_SUSPENDED,
     USER_BANNED,
@@ -38,9 +33,6 @@ public enum AdminAuditAction {
     WALLET_CREDITED,
     WALLET_DEBITED,
 
-    // Admin directly funded a vendor's wallet after verifying an external (P2P) payment —
-    // distinct from WALLET_CREDITED (a generic manual adjustment/correction) and from
-    // TOPUP_CONFIRMED (confirming a vendor-submitted TopupRequest).
     WALLET_TOPPED_UP,
 
     TOPUP_CONFIRMED,

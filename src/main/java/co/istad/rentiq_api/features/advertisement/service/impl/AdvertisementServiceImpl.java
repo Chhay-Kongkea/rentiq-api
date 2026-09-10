@@ -220,12 +220,6 @@ public class AdvertisementServiceImpl implements AdvertisementService {
             throw new InvalidOperationException("Advertisement", "This advertisement has no price quote to approve");
         }
 
-        // Charge the FROZEN quote from submission/resubmission time — never re-resolve the
-        // current setting here. If Admin changed the price after this advertisement was
-        // submitted, this vendor is unaffected; only advertisements submitted after the change
-        // get the new price. Debit BEFORE mutating the advertisement: if this throws
-        // (insufficient balance, wallet currency no longer matches the quote), nothing below
-        // runs and the whole transaction rolls back — the advertisement stays PENDING untouched.
         WalletResponse wallet = walletService.getWallet(advertisement.getVendorId());
         if (!wallet.currency().equals(advertisement.getQuotedCurrency())) {
             throw new InvalidOperationException(
@@ -379,12 +373,6 @@ public class AdvertisementServiceImpl implements AdvertisementService {
         }
     }
 
-    /**
-     * Resolves the vendor's wallet currency and the current effective price for the given
-     * package in that currency — the quote frozen onto the advertisement at
-     * submission/resubmission time. Does NOT check wallet balance: the vendor may top up any
-     * time before Admin approval, so only currency/pricing resolution needs to succeed here.
-     */
     private Quote quoteFor(AdvertisementPackage packageType, String vendorId) {
         WalletResponse wallet = walletService.getWallet(vendorId);
         BigDecimal price = platformPricingService.getAdvertisementPrice(packageType, wallet.currency())

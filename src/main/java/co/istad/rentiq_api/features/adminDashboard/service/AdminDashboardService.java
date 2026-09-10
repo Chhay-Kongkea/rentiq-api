@@ -11,12 +11,8 @@ import java.util.List;
 
 public interface AdminDashboardService {
     AdminDashboardResponse getDashboard();
-
     DashboardTrendResponse getRevenueTrend(LocalDate from, LocalDate to, GroupBy groupBy);
-
     DashboardCountTrendResponse getBookingTrend(LocalDate from, LocalDate to, GroupBy groupBy);
-
     DashboardCountTrendResponse getUserGrowth(LocalDate from, LocalDate to, GroupBy groupBy);
-
     List<RecentDashboardActivityResponse> getRecentActivity(int limit);
 }

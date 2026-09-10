@@ -273,15 +273,30 @@ public class FinancialReportServiceImpl implements FinancialReportService {
     @Override
     @Transactional(readOnly = true)
     public byte[] exportRevenuePdf(LocalDate from, LocalDate to, GroupBy groupBy) {
-        return exportGenerator.generateRevenuePdf(getRevenueReport(from, to, groupBy, fullRangePageable()));
+        return exportGenerator.generateRevenuePdf(buildExportData(from, to, groupBy));
     }
 
     @Override
     @Transactional(readOnly = true)
     public byte[] exportRevenueXlsx(LocalDate from, LocalDate to, GroupBy groupBy) {
-        return exportGenerator.generateRevenueXlsx(getRevenueReport(from, to, groupBy, fullRangePageable()));
+        return exportGenerator.generateRevenueXlsx(buildExportData(from, to, groupBy));
     }
 
+    /**
+     * Bundles the export payload from the exact same service methods the Admin Financial
+     * Reports API and dashboard already use — Booking GMV ({@link #getRevenueReport}),
+     * Calculated Commission ({@link #getCommissionReport}), and Platform Revenue
+     * ({@link #getPlatformRevenueSummary}) — so PDF/XLSX generation never recomputes a
+     * financial figure independently of the report service.
+     */
+    private RevenueExportData buildExportData(LocalDate from, LocalDate to, GroupBy groupBy) {
+        ValidatedRange range = validateRange(from, to);
+        RevenueReportResponse revenue = getRevenueReport(from, to, groupBy, fullRangePageable());
+        CommissionTimeSeriesResponse commission = getCommissionReport(from, to, groupBy, fullRangePageable());
+        PlatformRevenueSummaryResponse platformRevenue =
+                getPlatformRevenueSummary(range.fromInclusive(), range.toExclusive());
+        return new RevenueExportData(revenue, commission, platformRevenue, OffsetDateTime.now(ZoneOffset.UTC));
+    }
 
     private Pageable fullRangePageable() {
         return PageRequest.of(0, ReportPagingLimits.MAX_PERIOD_PAGE_SIZE);

@@ -29,8 +29,8 @@ public interface UserRepository extends JpaRepository<User, String> {
                    count(*) as value
             from users u
             where u.created_at >= :from and u.created_at < :to
-            group by date_trunc(:groupBy, u.created_at at time zone 'UTC')
-            order by period
+            group by 1
+            order by 1
             """, nativeQuery = true)
     java.util.List<DashboardCountProjection> countRegistrationsByPeriod(
             @Param("from") OffsetDateTime from,

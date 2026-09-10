@@ -34,18 +34,11 @@ import java.util.List;
 import java.util.UUID;
 
 public interface DisputeService {
-
     DisputeResponse createDispute(String userId, UUID bookingId, CreateDisputeRequest request);
-
     List<DisputeResponse> listDisputesForBooking(String userId, UUID bookingId);
-
     DisputeResponse getDispute(String userId, UUID disputeId);
-
     DisputeResponse updateDispute(String userId, UUID disputeId, UpdateDisputeRequest request);
-
     Page<DisputeResponse> adminListDisputes(String status, Pageable pageable);
-
     DisputeResponse adminGetDispute(UUID disputeId);
-
     DisputeResponse adminResolveDispute(String adminId, UUID disputeId, ResolveDisputeRequest request);
 }

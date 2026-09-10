@@ -12,23 +12,14 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class TokenService {
-
-
     private final OAuth2AuthorizedClientService service;
 
+    public String getAccessToken(OAuth2AuthenticationToken authentication){
 
-
-    public String getAccessToken(
-            OAuth2AuthenticationToken authentication
-    ){
-
-
-        OAuth2AuthorizedClient client =
-                service.loadAuthorizedClient(
+        OAuth2AuthorizedClient client = service.loadAuthorizedClient(
                         authentication.getAuthorizedClientRegistrationId(),
                         authentication.getName()
                 );
-
 
         return client
                 .getAccessToken()

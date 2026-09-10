@@ -67,8 +67,8 @@ BookingRepository extends JpaRepository<Booking, UUID> {
                    count(*) as value
             from bookings b
             where b.created_at >= :from and b.created_at < :to
-            group by date_trunc(:groupBy, b.created_at at time zone 'UTC')
-            order by period
+            group by 1
+            order by 1
             """, nativeQuery = true)
     List<DashboardCountProjection> countBookingsByPeriod(
             @Param("from") OffsetDateTime from,

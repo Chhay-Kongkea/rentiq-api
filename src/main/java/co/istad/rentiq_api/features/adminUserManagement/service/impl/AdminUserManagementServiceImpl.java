@@ -109,40 +109,82 @@ public class AdminUserManagementServiceImpl implements AdminUserManagementServic
     @Transactional
     public AdminUserStatusResponse suspendUser(String userId, String reason, String adminId) {
         User user = requireModeratableUser(userId, adminId);
+        requireActive(user, "User", "Only an active user can be suspended");
 
-        if (user.getAccountStatus() != AccountStatus.ACTIVE) {
-            throw new InvalidStateException(
-                    "User",
-                    user.getAccountStatus(),
-                    "Only an active user can be suspended"
-            );
-        }
-
-        return changeStatus(user, AccountStatus.SUSPENDED, reason);
+        return changeStatus(user, AccountStatus.SUSPENDED, reason,
+                AdminAuditTargetType.USER, AdminAuditAction.USER_SUSPENDED);
     }
 
     @Override
     @Transactional
     public AdminUserStatusResponse banUser(String userId, String reason, String adminId) {
         User user = requireModeratableUser(userId, adminId);
+        requireNotAlready(user, AccountStatus.BANNED, "User", "User is already banned");
 
-        if (user.getAccountStatus() == AccountStatus.BANNED) {
-            throw new InvalidStateException("User", user.getAccountStatus(), "User is already banned");
-        }
-
-        return changeStatus(user, AccountStatus.BANNED, reason);
+        return changeStatus(user, AccountStatus.BANNED, reason,
+                AdminAuditTargetType.USER, AdminAuditAction.USER_BANNED);
     }
 
     @Override
     @Transactional
     public AdminUserStatusResponse reinstateUser(String userId, String reason, String adminId) {
         User user = requireModeratableUser(userId, adminId);
+        requireNotAlready(user, AccountStatus.ACTIVE, "User", "User is already active");
 
-        if (user.getAccountStatus() == AccountStatus.ACTIVE) {
-            throw new InvalidStateException("User", user.getAccountStatus(), "User is already active");
+        return changeStatus(user, AccountStatus.ACTIVE, reason,
+                AdminAuditTargetType.USER, AdminAuditAction.USER_REINSTATED);
+    }
+
+    // ================================================================
+    // VENDOR MODERATION
+    //
+    // Backend audit P0-2 — vendor moderation used to live in a second, divergent
+    // implementation (VendorPerformanceServiceImpl) that never disabled the Keycloak
+    // account, only logged out existing sessions. A banned vendor could simply log back
+    // in. This is now the single canonical moderation implementation for both the
+    // /admin/users and /admin/vendors routes; only the audit target/action differs.
+    // ================================================================
+
+    @Override
+    @Transactional
+    public AdminUserStatusResponse suspendVendor(String userId, String reason, String adminId) {
+        User user = requireModeratableUser(userId, adminId);
+        requireActive(user, "Vendor", "Only an active vendor can be suspended");
+
+        return changeStatus(user, AccountStatus.SUSPENDED, reason,
+                AdminAuditTargetType.VENDOR, AdminAuditAction.VENDOR_SUSPENDED);
+    }
+
+    @Override
+    @Transactional
+    public AdminUserStatusResponse banVendor(String userId, String reason, String adminId) {
+        User user = requireModeratableUser(userId, adminId);
+        requireNotAlready(user, AccountStatus.BANNED, "Vendor", "Vendor is already banned");
+
+        return changeStatus(user, AccountStatus.BANNED, reason,
+                AdminAuditTargetType.VENDOR, AdminAuditAction.VENDOR_BANNED);
+    }
+
+    @Override
+    @Transactional
+    public AdminUserStatusResponse reinstateVendor(String userId, String reason, String adminId) {
+        User user = requireModeratableUser(userId, adminId);
+        requireNotAlready(user, AccountStatus.ACTIVE, "Vendor", "Vendor is already active");
+
+        return changeStatus(user, AccountStatus.ACTIVE, reason,
+                AdminAuditTargetType.VENDOR, AdminAuditAction.VENDOR_REINSTATED);
+    }
+
+    private void requireActive(User user, String resourceName, String message) {
+        if (user.getAccountStatus() != AccountStatus.ACTIVE) {
+            throw new InvalidStateException(resourceName, user.getAccountStatus(), message);
         }
+    }
 
-        return changeStatus(user, AccountStatus.ACTIVE, reason);
+    private void requireNotAlready(User user, AccountStatus status, String resourceName, String message) {
+        if (user.getAccountStatus() == status) {
+            throw new InvalidStateException(resourceName, user.getAccountStatus(), message);
+        }
     }
 
     @Override
@@ -178,25 +220,43 @@ public class AdminUserManagementServiceImpl implements AdminUserManagementServic
         return toAdminVendorResponse(new VendorSeed(user, identity));
     }
 
-    private AdminUserStatusResponse changeStatus(User user, AccountStatus newStatus, String reason) {
+    private AdminUserStatusResponse changeStatus(
+            User user,
+            AccountStatus newStatus,
+            String reason,
+            AdminAuditTargetType targetType,
+            AdminAuditAction action
+    ) {
         AccountStatus previousStatus = user.getAccountStatus();
+        boolean targetEnabled = newStatus == AccountStatus.ACTIVE;
 
-        syncKeycloakEnabledState(user.getId(), newStatus == AccountStatus.ACTIVE);
+        // Keycloak is synchronized FIRST. If this fails, execution stops here: no local
+        // status change, no audit entry — never a misleading partially-completed moderation
+        // state (backend audit P0-2).
+        syncKeycloakEnabledState(user.getId(), targetEnabled);
 
-        user.setAccountStatus(newStatus);
-        user = userRepository.saveAndFlush(user);
+        try {
+            user.setAccountStatus(newStatus);
+            user = userRepository.saveAndFlush(user);
 
-        if (newStatus != AccountStatus.ACTIVE) {
-            revokeKeycloakSessionsQuietly(user.getId());
+            if (newStatus != AccountStatus.ACTIVE) {
+                revokeKeycloakSessionsQuietly(user.getId());
+            }
+
+            adminAuditService.record(
+                    action,
+                    targetType,
+                    user.getId(),
+                    Map.of("status", previousStatus.name()),
+                    Map.of("status", newStatus.name()),
+                    reason);
+        } catch (RuntimeException e) {
+            // Keycloak already flipped but the local commit/audit failed — revert Keycloak
+            // best-effort instead of leaving the identity provider silently out of sync with
+            // a Rentiq status change that never actually took effect.
+            compensateKeycloakEnabledState(user.getId(), !targetEnabled, e);
+            throw e;
         }
-
-        adminAuditService.record(
-                actionFor(newStatus),
-                AdminAuditTargetType.USER,
-                user.getId(),
-                Map.of("status", previousStatus.name()),
-                Map.of("status", newStatus.name()),
-                reason);
 
         return new AdminUserStatusResponse(
                 user.getId(),
@@ -205,14 +265,6 @@ public class AdminUserManagementServiceImpl implements AdminUserManagementServic
                 reason,
                 user.getUpdatedAt()
         );
-    }
-
-    private AdminAuditAction actionFor(AccountStatus newStatus) {
-        return switch (newStatus) {
-            case SUSPENDED -> AdminAuditAction.USER_SUSPENDED;
-            case BANNED -> AdminAuditAction.USER_BANNED;
-            case ACTIVE -> AdminAuditAction.USER_REINSTATED;
-        };
     }
 
     private User requireModeratableUser(String userId, String adminId) {
@@ -341,6 +393,17 @@ public class AdminUserManagementServiceImpl implements AdminUserManagementServic
             throw new NotFoundException("Identity user", userId);
         } catch (RuntimeException e) {
             throw new KeycloakOperationException("Failed to update Keycloak access for user " + userId, e);
+        }
+    }
+
+    private void compensateKeycloakEnabledState(String userId, boolean revertToEnabled, RuntimeException cause) {
+        try {
+            syncKeycloakEnabledState(userId, revertToEnabled);
+            log.warn("Reverted Keycloak enabled={} for user {} after a moderation change failed to commit locally",
+                    revertToEnabled, userId, cause);
+        } catch (RuntimeException compensationFailure) {
+            log.error("Keycloak enabled-state for user {} may now be out of sync with Rentiq after a failed " +
+                    "moderation attempt; manual reconciliation required", userId, compensationFailure);
         }
     }
 

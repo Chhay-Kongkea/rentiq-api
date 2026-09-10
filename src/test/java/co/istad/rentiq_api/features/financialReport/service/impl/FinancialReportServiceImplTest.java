@@ -1,8 +1,7 @@
 package co.istad.rentiq_api.features.financialReport.service.impl;
 
-import co.istad.rentiq_api.common.config.props.KeycloakAdminClientProps;
 import co.istad.rentiq_api.common.exception.InvalidOperationException;
-import co.istad.rentiq_api.features.adminAudit.service.AdminAuditService;
+import co.istad.rentiq_api.features.adminUserManagement.service.AdminUserManagementService;
 import co.istad.rentiq_api.features.bookings.enums.BookingStatus;
 import co.istad.rentiq_api.features.bookings.repository.BookingRepository;
 import co.istad.rentiq_api.features.bookings.repository.BookingStatusHistoryRepository;
@@ -11,7 +10,6 @@ import co.istad.rentiq_api.features.userProfile.entity.User;
 import co.istad.rentiq_api.features.userProfile.enums.AccountStatus;
 import co.istad.rentiq_api.features.userProfile.repository.UserRepository;
 import co.istad.rentiq_api.features.vendorPerformance.dto.response.VendorPerformanceResponse;
-import co.istad.rentiq_api.features.vendorPerformance.repository.VendorStatusAuditRepository;
 import co.istad.rentiq_api.features.vendorPerformance.service.impl.VendorPerformanceServiceImpl;
 import co.istad.rentiq_api.features.financialReport.dto.GroupBy;
 import co.istad.rentiq_api.features.financialReport.dto.projection.BookingTotalsProjection;
@@ -35,7 +33,6 @@ import co.istad.rentiq_api.features.wallet.repository.WalletTransactionRepositor
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.keycloak.admin.client.Keycloak;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
@@ -615,8 +612,7 @@ class FinancialReportServiceImplTest {
                 Optional.of(User.builder().id(OWNER_ID).accountStatus(AccountStatus.ACTIVE).build()));
         VendorPerformanceServiceImpl performanceService = new VendorPerformanceServiceImpl(
                 userRepository, bookingRepository, mock(BookingStatusHistoryRepository.class),
-                mock(ReviewRepository.class), mock(VendorStatusAuditRepository.class), mock(Keycloak.class),
-                mock(KeycloakAdminClientProps.class), mock(AdminAuditService.class));
+                mock(ReviewRepository.class), mock(AdminUserManagementService.class));
         VendorPerformanceResponse performance = performanceService.getPerformance(OWNER_ID);
 
         assertThat(performance.completedBookingValue()).isEqualByComparingTo(usd.completedBookingValue());

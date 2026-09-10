@@ -1,5 +1,6 @@
 package co.istad.rentiq_api.features.kyc.service;
 
+import co.istad.rentiq_api.features.imageUpload.validation.ImageContentValidator;
 import co.istad.rentiq_api.features.kyc.exception.KycException;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
@@ -20,7 +21,11 @@ import java.util.UUID;
 public class KycImageStorageService {
 
     private final Cloudinary cloudinary;
+    private final ImageContentValidator imageContentValidator;
 
+    // KYC documents are deliberately restricted to JPEG/PNG only (narrower than the product's
+    // general JPEG/PNG/WEBP raster support) — unchanged by the P0-3 fix, only the underlying
+    // check is now signature-validated instead of trusting the Content-Type header alone.
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of("image/jpeg", "image/png");
     private static final long MAX_FILE_SIZE_BYTES = 8L * 1024 * 1024; // 8MB
 
@@ -47,15 +52,11 @@ public class KycImageStorageService {
     }
 
     private void validate(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new KycException(HttpStatus.BAD_REQUEST, "Document image is required");
-        }
-        if (file.getSize() > MAX_FILE_SIZE_BYTES) {
-            throw new KycException(HttpStatus.BAD_REQUEST, "Document image must be smaller than 8MB");
-        }
-        String contentType = file.getContentType();
-        if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
-            throw new KycException(HttpStatus.BAD_REQUEST, "Document image must be JPEG or PNG");
-        }
+        imageContentValidator.validate(
+                file,
+                ALLOWED_CONTENT_TYPES,
+                MAX_FILE_SIZE_BYTES,
+                message -> new KycException(HttpStatus.BAD_REQUEST, message)
+        );
     }
 }

@@ -1,6 +1,5 @@
 package co.istad.rentiq_api.features.adminAudit.enums;
 
-/** Exact action values accepted by the legacy PostgreSQL CHECK constraint. */
 public enum AdminAuditPersistedAction {
     USER_SUSPENDED,
     USER_BANNED,

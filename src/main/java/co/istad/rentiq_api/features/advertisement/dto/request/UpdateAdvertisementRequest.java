@@ -8,11 +8,6 @@ import jakarta.validation.constraints.Size;
 
 import java.time.OffsetDateTime;
 
-/**
- * itemId is intentionally not editable — advertising a different item is a new advertisement,
- * not an edit of this one. Excludes price, currency, durationDays, endAt, and status for the
- * same reason as CreateAdvertisementRequest: those are always backend-derived.
- */
 public record UpdateAdvertisementRequest(
 
         @NotNull

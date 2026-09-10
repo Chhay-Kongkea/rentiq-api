@@ -2,6 +2,7 @@ package co.istad.rentiq_api.features.userProfile.service;
 
 
 
+import co.istad.rentiq_api.features.imageUpload.validation.ImageContentValidator;
 import co.istad.rentiq_api.features.userProfile.exception.AvatarStorageException;
 import co.istad.rentiq_api.features.userProfile.exception.InvalidAvatarException;
 import com.cloudinary.Cloudinary;
@@ -13,7 +14,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -21,9 +21,8 @@ import java.util.Set;
 public class AvatarStorageService {
 
     private final Cloudinary cloudinary;
+    private final ImageContentValidator imageContentValidator;
 
-    private static final Set<String> ALLOWED_CONTENT_TYPES =
-            Set.of("image/jpeg", "image/png", "image/webp");
     private static final long MAX_FILE_SIZE_BYTES = 5L * 1024 * 1024; // 5MB
 
     public String upload(String userId, MultipartFile file) {
@@ -67,15 +66,11 @@ public class AvatarStorageService {
     }
 
     private void validate(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new InvalidAvatarException("Avatar file is required");
-        }
-        if (file.getSize() > MAX_FILE_SIZE_BYTES) {
-            throw new InvalidAvatarException("Avatar must be smaller than 5MB");
-        }
-        String contentType = file.getContentType();
-        if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
-            throw new InvalidAvatarException("Avatar must be JPEG, PNG, or WEBP");
-        }
+        imageContentValidator.validate(
+                file,
+                ImageContentValidator.RASTER_IMAGE_TYPES,
+                MAX_FILE_SIZE_BYTES,
+                InvalidAvatarException::new
+        );
     }
 }

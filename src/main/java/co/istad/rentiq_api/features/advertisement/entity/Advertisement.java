@@ -9,10 +9,6 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-/**
- * References the vendor and the advertised item by id (not a JPA relationship) — same
- * cross-feature convention used by WalletTransaction/AdminAuditLog elsewhere in this codebase.
- */
 @Entity
 @Table(
         name = "advertisements",
@@ -56,11 +52,6 @@ public class Advertisement {
     @Column(name = "duration_days")
     private Integer durationDays;
 
-    /**
-     * The price quote generated at submission/resubmission time from the CURRENT effective
-     * setting — frozen so a later Admin price change never silently reprices a submission
-     * already awaiting review. See {@code price}/{@code currency} for what was actually charged.
-     */
     @Column(name = "quoted_price", precision = 15, scale = 2)
     private BigDecimal quotedPrice;
 
@@ -81,12 +72,6 @@ public class Advertisement {
     @Column(name = "end_at", nullable = false)
     private OffsetDateTime endAt;
 
-    /**
-     * Frozen only at successful admin approval — the actual amount debited from the vendor's
-     * wallet at that moment. Null while PENDING (or after a REJECTED resubmission, since a
-     * rejected advertisement was never charged): this must never look like a completed payment
-     * before one has actually happened.
-     */
     @Column(name = "price", precision = 15, scale = 2)
     private BigDecimal price;
 

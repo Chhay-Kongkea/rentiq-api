@@ -17,6 +17,7 @@ import co.istad.rentiq_api.features.bookings.mapper.BookingStatusHistoryMapper;
 import co.istad.rentiq_api.features.bookings.repository.BookingQrCodeRepository;
 import co.istad.rentiq_api.features.bookings.repository.BookingRepository;
 import co.istad.rentiq_api.features.bookings.repository.BookingStatusHistoryRepository;
+import co.istad.rentiq_api.features.bookings.validation.BookingTransitionValidator;
 import co.istad.rentiq_api.features.category.Category;
 import co.istad.rentiq_api.features.category.CategoryRepository;
 import co.istad.rentiq_api.features.item.entity.Item;
@@ -81,7 +82,8 @@ class BookingServiceImplTest {
         service = new BookingServiceImpl(
                 bookingRepository, historyRepository, qrCodeRepository, itemRepository,
                 offerRepository, categoryRepository, mapper, historyMapper,
-                qrCodeGenerator, documentGenerator, adminAuditService, platformSettingService);
+                qrCodeGenerator, documentGenerator, adminAuditService, platformSettingService,
+                new BookingTransitionValidator());
 
         lenient().when(bookingRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         lenient().when(platformSettingService.getInteger(PlatformSettingKey.BOOKING_MAX_RENTAL_DAYS)).thenReturn(30);
@@ -360,6 +362,175 @@ class BookingServiceImplTest {
                 new UpdateBookingStatusRequest(BookingStatus.COMPLETED, null),
                 "admin-1", true))
                 .isInstanceOf(InvalidBookingOperationException.class);
+    }
+
+    // ---------------------------------------------------------------
+    // Backend audit P0-4 — Admin status updates must go through the same canonical state
+    // machine as normal customer/vendor updates. Admin is exempt only from the "must be the
+    // specific customer/owner" role check, never from the transition topology.
+    // ---------------------------------------------------------------
+
+    private Booking bookingWithStatus(BookingStatus status) {
+        Booking booking = rentedBooking();
+        booking.setStatus(status);
+        return booking;
+    }
+
+    @Test
+    void admin_pendingToCompleted_isRejected() {
+        Booking booking = bookingWithStatus(BookingStatus.PENDING);
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> service.updateStatus(booking.getId(),
+                new UpdateBookingStatusRequest(BookingStatus.COMPLETED, "force complete"),
+                "admin-1", true))
+                .isInstanceOf(InvalidBookingOperationException.class);
+
+        verify(historyRepository, never()).save(any());
+        verify(adminAuditService, never()).record(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void admin_rejectedToApproved_isRejected_terminalStateNeverReactivates() {
+        Booking booking = bookingWithStatus(BookingStatus.REJECTED);
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> service.updateStatus(booking.getId(),
+                new UpdateBookingStatusRequest(BookingStatus.APPROVED, "reconsider"),
+                "admin-1", true))
+                .isInstanceOf(InvalidBookingOperationException.class);
+    }
+
+    @Test
+    void admin_completedToPending_isRejected() {
+        Booking booking = bookingWithStatus(BookingStatus.COMPLETED);
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> service.updateStatus(booking.getId(),
+                new UpdateBookingStatusRequest(BookingStatus.PENDING, "reopen"),
+                "admin-1", true))
+                .isInstanceOf(InvalidBookingOperationException.class);
+    }
+
+    @Test
+    void admin_cancelledToRented_isRejected() {
+        Booking booking = bookingWithStatus(BookingStatus.CANCELLED);
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> service.updateStatus(booking.getId(),
+                new UpdateBookingStatusRequest(BookingStatus.RENTED, "force pickup"),
+                "admin-1", true))
+                .isInstanceOf(InvalidBookingOperationException.class);
+    }
+
+    @Test
+    void admin_approvedToRented_isRejected_mustUseQrScanInstead() {
+        Booking booking = bookingWithStatus(BookingStatus.APPROVED);
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> service.updateStatus(booking.getId(),
+                new UpdateBookingStatusRequest(BookingStatus.RENTED, "skip QR"),
+                "admin-1", true))
+                .isInstanceOf(InvalidBookingOperationException.class)
+                .hasMessageContaining("QR code");
+    }
+
+    @Test
+    void admin_canApproveAPendingBooking_withoutBeingTheOwner() {
+        Booking booking = bookingWithStatus(BookingStatus.PENDING);
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+
+        service.updateStatus(booking.getId(),
+                new UpdateBookingStatusRequest(BookingStatus.APPROVED, "vendor unreachable, admin approved"),
+                "admin-1", true);
+
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.APPROVED);
+    }
+
+    @Test
+    void admin_canRejectAPendingBooking_withoutBeingTheOwner() {
+        Booking booking = bookingWithStatus(BookingStatus.PENDING);
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+
+        service.updateStatus(booking.getId(),
+                new UpdateBookingStatusRequest(BookingStatus.REJECTED, "policy violation"),
+                "admin-1", true);
+
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.REJECTED);
+    }
+
+    @Test
+    void admin_canCancelAPendingBooking_withoutBeingTheCustomer() {
+        Booking booking = bookingWithStatus(BookingStatus.PENDING);
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+
+        service.updateStatus(booking.getId(),
+                new UpdateBookingStatusRequest(BookingStatus.CANCELLED, "fraud suspected"),
+                "admin-1", true);
+
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.CANCELLED);
+    }
+
+    @Test
+    void admin_canCancelAnApprovedBooking_withoutBeingTheCustomer() {
+        Booking booking = bookingWithStatus(BookingStatus.APPROVED);
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+
+        service.updateStatus(booking.getId(),
+                new UpdateBookingStatusRequest(BookingStatus.CANCELLED, "item recalled"),
+                "admin-1", true);
+
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.CANCELLED);
+    }
+
+    @Test
+    void admin_canCompleteARentedBooking_withoutBeingTheOwner() {
+        Booking booking = bookingWithStatus(BookingStatus.RENTED);
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+
+        service.updateStatus(booking.getId(),
+                new UpdateBookingStatusRequest(BookingStatus.COMPLETED, "owner unresponsive"),
+                "admin-1", true);
+
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.COMPLETED);
+    }
+
+    @Test
+    void admin_validTransition_recordsFullHistoryEntry() {
+        Booking booking = bookingWithStatus(BookingStatus.PENDING);
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+
+        service.updateStatus(booking.getId(),
+                new UpdateBookingStatusRequest(BookingStatus.CANCELLED, "fraud suspected"),
+                "admin-1", true);
+
+        ArgumentCaptor<co.istad.rentiq_api.features.bookings.entity.BookingStatusHistory> captor =
+                ArgumentCaptor.forClass(co.istad.rentiq_api.features.bookings.entity.BookingStatusHistory.class);
+        verify(historyRepository).save(captor.capture());
+
+        var history = captor.getValue();
+        assertThat(history.getOldStatus()).isEqualTo(BookingStatus.PENDING);
+        assertThat(history.getNewStatus()).isEqualTo(BookingStatus.CANCELLED);
+        assertThat(history.getChangedBy()).isEqualTo("admin-1");
+        assertThat(history.getReason()).isEqualTo("fraud suspected");
+    }
+
+    @Test
+    void admin_validTransition_recordsAdminAudit_withPreviousAndNewStatus() {
+        Booking booking = bookingWithStatus(BookingStatus.PENDING);
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+
+        service.updateStatus(booking.getId(),
+                new UpdateBookingStatusRequest(BookingStatus.REJECTED, "duplicate booking"),
+                "admin-1", true);
+
+        verify(adminAuditService).record(
+                AdminAuditAction.BOOKING_STATUS_CHANGED,
+                AdminAuditTargetType.BOOKING,
+                booking.getId().toString(),
+                Map.of("status", "PENDING"),
+                Map.of("status", "REJECTED"),
+                "duplicate booking");
     }
 
     // ---------------------------------------------------------------

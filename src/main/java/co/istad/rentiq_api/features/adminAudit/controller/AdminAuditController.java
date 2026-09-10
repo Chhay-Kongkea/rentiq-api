@@ -20,11 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 import java.util.UUID;
 
-/**
- * Read-only. Audit rows are written exclusively by AdminAuditService from within the business
- * services whose mutations they describe — there is deliberately no create/update/delete
- * endpoint here.
- */
 @RestController
 @RequestMapping("/api/v1/admin/audit-logs")
 @RequiredArgsConstructor

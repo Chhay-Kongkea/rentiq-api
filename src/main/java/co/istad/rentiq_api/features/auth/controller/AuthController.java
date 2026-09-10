@@ -41,23 +41,16 @@ public class AuthController {
     public TokenResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
     }
-    /*
-     * Called by the frontend after OAuth login succeeds.
-     */
+
     @GetMapping("/me")
     public Map<String, Object> getCurrentUser(
             OAuth2AuthenticationToken authentication
     ) {
         Map<String, Object> result = new LinkedHashMap<>();
-
         result.put("userId", authentication.getPrincipal().getAttribute("sub"));
-
         result.put("username", authentication.getPrincipal().getAttribute("preferred_username"));
-
         result.put("email", authentication.getPrincipal().getAttribute("email"));
-
         result.put("firstName", authentication.getPrincipal().getAttribute("given_name"));
-
         result.put("lastName", authentication.getPrincipal().getAttribute("family_name"));
 
         return result;
@@ -118,7 +111,6 @@ public class AuthController {
             @Valid @RequestBody ChangePasswordRequest request
     ) {
         String userId = AuthUtils.extractUserId();
-
         authService.changePassword(userId, request);
 
         return MessageResponse.builder()
