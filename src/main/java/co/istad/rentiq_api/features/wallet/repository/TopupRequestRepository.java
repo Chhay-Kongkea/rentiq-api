@@ -18,6 +18,8 @@ public interface TopupRequestRepository extends JpaRepository<TopupRequest, UUID
 
     Page<TopupRequest> findByWalletId(UUID walletId, Pageable pageable);
 
+    boolean existsByBankReference(String bankReference);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select t from TopupRequest t where t.bankReference = :bankReference")
     Optional<TopupRequest> findByBankReferenceForUpdate(@Param("bankReference") String bankReference);

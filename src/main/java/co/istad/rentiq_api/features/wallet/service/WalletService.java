@@ -2,7 +2,9 @@ package co.istad.rentiq_api.features.wallet.service;
 
 import co.istad.rentiq_api.features.wallet.dto.request.AdminWalletAdjustRequest;
 import co.istad.rentiq_api.features.wallet.dto.request.AdminWalletTopupRequest;
+import co.istad.rentiq_api.features.wallet.dto.request.CreateTopupRequestRequest;
 import co.istad.rentiq_api.features.wallet.dto.response.AdminWalletTopupResponse;
+import co.istad.rentiq_api.features.wallet.dto.response.TopupRequestResponse;
 import co.istad.rentiq_api.features.wallet.dto.response.WalletResponse;
 import co.istad.rentiq_api.features.wallet.dto.response.WalletTransactionResponse;
 import org.springframework.data.domain.Page;
@@ -12,9 +14,11 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
- * The direct Admin top-up ({@link #adminTopupWallet}) is the ONLY wallet funding path. The
- * legacy vendor-initiated top-up-request/webhook/admin-confirm flow was removed (backend audit
- * SEC-001/BUS-001) — it duplicated this path and its public webhook was forgeable.
+ * The direct Admin top-up ({@link #adminTopupWallet}) is the ONLY path that actually credits a
+ * wallet. A vendor can {@link #createTopupRequest submit a top-up request}, but that only records
+ * a PENDING row for an admin to review — it never mutates a balance, and there is no payment
+ * gateway or webhook on that path (the removed legacy flow — backend audit SEC-001/BUS-001 — was
+ * dangerous specifically because of its forgeable public confirmation webhook).
  */
 public interface WalletService {
 
@@ -25,6 +29,15 @@ public interface WalletService {
     Page<WalletTransactionResponse> getTransactions(String ownerId, Pageable pageable);
 
     WalletTransactionResponse getTransaction(String ownerId, UUID transactionId);
+
+    /**
+     * Vendor submits a request for the admin to top up their wallet. Creates a PENDING
+     * {@code TopupRequest} against the vendor's own wallet; does not touch the balance. The admin
+     * fulfils it out of band via {@link #adminTopupWallet}.
+     */
+    TopupRequestResponse createTopupRequest(String ownerId, CreateTopupRequestRequest request);
+
+    Page<TopupRequestResponse> getTopupRequests(String ownerId, Pageable pageable);
 
     Page<WalletResponse> adminListWallets(Pageable pageable);
 

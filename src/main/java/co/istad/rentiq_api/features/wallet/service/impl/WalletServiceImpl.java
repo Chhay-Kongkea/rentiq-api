@@ -11,17 +11,22 @@ import co.istad.rentiq_api.features.vendorApplication.enums.VendorApplicationSta
 import co.istad.rentiq_api.features.vendorApplication.repository.VendorApplicationRepository;
 import co.istad.rentiq_api.features.wallet.dto.request.AdminWalletAdjustRequest;
 import co.istad.rentiq_api.features.wallet.dto.request.AdminWalletTopupRequest;
+import co.istad.rentiq_api.features.wallet.dto.request.CreateTopupRequestRequest;
 import co.istad.rentiq_api.features.wallet.dto.response.AdminWalletTopupResponse;
+import co.istad.rentiq_api.features.wallet.dto.response.TopupRequestResponse;
 import co.istad.rentiq_api.features.wallet.dto.response.WalletResponse;
 import co.istad.rentiq_api.features.wallet.dto.response.WalletTransactionResponse;
 import co.istad.rentiq_api.features.wallet.entity.OwnerWallet;
+import co.istad.rentiq_api.features.wallet.entity.TopupRequest;
 import co.istad.rentiq_api.features.wallet.entity.WalletTransaction;
+import co.istad.rentiq_api.features.wallet.enums.TopupStatus;
 import co.istad.rentiq_api.features.wallet.enums.TransactionDirection;
 import co.istad.rentiq_api.features.wallet.enums.TransactionType;
 import co.istad.rentiq_api.features.wallet.enums.WalletStatus;
 import co.istad.rentiq_api.features.wallet.exception.WalletException;
 import co.istad.rentiq_api.features.wallet.mapper.WalletMapper;
 import co.istad.rentiq_api.features.wallet.repository.OwnerWalletRepository;
+import co.istad.rentiq_api.features.wallet.repository.TopupRequestRepository;
 import co.istad.rentiq_api.features.wallet.repository.WalletTransactionRepository;
 import co.istad.rentiq_api.features.wallet.service.WalletService;
 import lombok.RequiredArgsConstructor;
@@ -37,12 +42,14 @@ import java.util.UUID;
 
 /**
  * The ONLY way to credit a wallet with TOP_UP/IN is {@link #adminTopupWallet} — Admin verifies
- * an external payment and directly credits the vendor's wallet. The legacy vendor-initiated
- * top-up-request + public webhook + admin-confirm flow (SEC-001 / BUS-001 in the backend audit)
- * has been removed: it duplicated this funding path and its webhook was reachable with a
- * committed fallback signing secret, allowing forged wallet credits. See
- * {@code TopupRequest}/{@code TopupRequestRepository} for why those types remain (read-only,
- * Admin Dashboard "recent activity" feed only — no code path writes to them anymore).
+ * an external payment and directly credits the vendor's wallet.
+ *
+ * <p>A vendor may {@link #createTopupRequest submit a top-up request}: this writes a PENDING
+ * {@code TopupRequest} row for an admin to review and never mutates a balance. It restores the
+ * request/list half of the old flow WITHOUT the part that was dangerous — the legacy public
+ * confirmation webhook (SEC-001 / BUS-001 in the backend audit) was reachable with a committed
+ * fallback signing secret and could forge wallet credits; there is no webhook here, and the
+ * admin still credits the wallet by hand via {@link #adminTopupWallet}.
  */
 @Service
 @RequiredArgsConstructor
@@ -53,6 +60,7 @@ public class WalletServiceImpl implements WalletService {
 
     private final OwnerWalletRepository walletRepository;
     private final WalletTransactionRepository transactionRepository;
+    private final TopupRequestRepository topupRequestRepository;
     private final WalletMapper walletMapper;
     private final AdminAuditService adminAuditService;
     private final VendorApplicationRepository vendorApplicationRepository;
@@ -114,6 +122,49 @@ public class WalletServiceImpl implements WalletService {
         }
 
         return walletMapper.toResponse(transaction);
+    }
+
+    @Override
+    @Transactional
+    public TopupRequestResponse createTopupRequest(String ownerId, CreateTopupRequestRequest request) {
+        OwnerWallet wallet = requireWallet(ownerId);
+
+        String bankReference = trimToNull(request.bankReference());
+        if (bankReference != null && topupRequestRepository.existsByBankReference(bankReference)) {
+            throw WalletException.duplicateBankReference(bankReference);
+        }
+
+        TopupRequest.TopupRequestBuilder builder = TopupRequest.builder()
+                .walletId(wallet.getId())
+                .amount(request.amount())
+                .status(TopupStatus.PENDING)
+                .bankReference(bankReference);
+
+        String paymentMethod = trimToNull(request.paymentMethod());
+        if (paymentMethod != null) {
+            builder.paymentMethod(paymentMethod);
+        }
+
+        TopupRequest saved = topupRequestRepository.save(builder.build());
+        log.info("Vendor {} submitted top-up request {} for {} on wallet {}",
+                ownerId, saved.getId(), saved.getAmount(), wallet.getId());
+
+        return walletMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<TopupRequestResponse> getTopupRequests(String ownerId, Pageable pageable) {
+        OwnerWallet wallet = requireWallet(ownerId);
+        return topupRequestRepository.findByWalletId(wallet.getId(), pageable).map(walletMapper::toResponse);
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     @Override
